@@ -1,23 +1,9 @@
-import { Bricolage_Grotesque, Inter } from "next/font/google";
 import "./globals.css";
-
-const display = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const body = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-body",
-  display: "swap",
-});
+import "./welcome.css";
 
 export const metadata = {
-  title: "Photo Booth · Kiosk",
-  description: "AI photo booth — unattended kiosk",
+  title: "El Tequileño · Photo Booth",
+  description: "Un recuerdo de tu visita a El Tequileño. A memory of your visit.",
 };
 
 export const viewport = {
@@ -29,7 +15,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html lang="es">
       <body>{children}</body>
     </html>
   );

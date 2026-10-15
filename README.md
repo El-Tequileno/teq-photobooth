@@ -1,4 +1,44 @@
-# AI Photo Booth — Phase 2 (kiosk simulator)
+# TEQ Photobooth — paso 1: bienvenida e idioma
+
+Photo booth para el tasting room de El Tequileño, adaptado desde
+`photobooth-kiosk`. El producto final usará fotografías con marcos
+preestablecidos, sin IA ni impresión.
+
+Este primer paso incluye:
+
+- Bienvenida inspirada en las referencias de Curator: fondo rojizo, trama de
+  puntos, agave y tarjetas decorativas.
+- Logo oficial blanco de El Tequileño, reutilizado de los recursos de marca
+  locales del proyecto El TEQ Game.
+- Selector Español / English en la primera pantalla, con selección visible,
+  textos traducidos y actualización del idioma del documento.
+- Vuelta al español al reiniciar una sesión para el siguiente visitante.
+- Fuentes del sistema, sin descargas de fuentes externas.
+
+Las tarjetas son ilustraciones decorativas, no fotografías de visitantes.
+El SVG del logo se conserva sin modificar sus trazados.
+
+**Las pantallas posteriores y las rutas internas siguen siendo las del prototipo
+original.** Los siguientes pasos sustituirán ese flujo por foto/GIF, cámara con
+marcos, entrega por correo y preparación como PWA. La bienvenida se puede
+revisar sin configurar servicios externos.
+
+## Revisar este paso
+
+```sh
+npm ci
+npm run dev
+```
+
+Abrir la dirección Local que muestre Next.js. Para elegir un puerto, usar
+`npm run dev -- --port 3001`. Compilar con `npm run build`.
+
+Archivos principales: `app/components/welcome-screen.js`, `app/welcome.css`,
+`app/page.js`, `app/layout.js` y `public/brand/el-tequileno-white.svg`.
+
+---
+
+## Documentación del prototipo original (pendiente de sustituir)
 
 Mini Next.js app that simulates the **unattended kiosk**: the guest taps the screen,
 picks a template, takes a photo, and receives their transformed version. Reuses the

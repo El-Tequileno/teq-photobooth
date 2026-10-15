@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import QRCode from "qrcode";
 import { PRESETS_PUBLIC } from "../lib/presets";
 import { printPhoto } from "../lib/printClient";
+import WelcomeScreen from "./components/welcome-screen";
 
 // Unattended kiosk timers (seconds)
 const IDLE_RESET_S = 45;   // no touch -> back to attract (and clear photo)
@@ -28,6 +29,7 @@ const CAM_MODES = {
 
 export default function Kiosk() {
   const [screen, setScreen] = useState("attract"); // attract|select|camera|processing|error|result
+  const [language, setLanguage] = useState("es");
   const [preset, setPreset] = useState(null);
   const [captured, setCaptured] = useState(null);   // raw photo dataURL
   const [result, setResult] = useState(null);       // transformed dataURL
@@ -45,6 +47,10 @@ export default function Kiosk() {
   const streamRef = useRef(null);
   const idleTimer = useRef(null);
 
+  useEffect(() => {
+    document.documentElement.lang = screen === "attract" ? language : "en";
+  }, [language, screen]);
+
   // Full reset: clear guest data and return to attract
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -55,6 +61,7 @@ export default function Kiosk() {
 
   const resetToAttract = useCallback(() => {
     stopCamera();
+    setLanguage("es");
     setPreset(null);
     setCaptured(null);   // privacy: never keep anyone's face in memory/on screen
     setResult(null);
@@ -209,24 +216,16 @@ export default function Kiosk() {
   //  RENDER
   // ─────────────────────────────────────────────────────────────
   return (
-    <main className="kiosk" onPointerDown={kickIdle}>
+    <main className={`kiosk${screen === "attract" ? " kiosk--welcome" : ""}`} onPointerDown={kickIdle}>
       {flash && <div className="flash" />}
 
       {/* ATTRACT */}
       {screen === "attract" && (
-        <>
-          <div className="attract-full" onClick={() => setScreen("select")} />
-          <div className="stage-content">
-            <p className="eyebrow">AI Photo Booth</p>
-            <h1 className="title">
-              Become<br /><span className="accent">someone else</span>
-            </h1>
-            <p className="subtitle">Your face. A new world. In seconds.</p>
-            <div className="attract-tap">
-              <span className="tap-ring" /> Tap to start
-            </div>
-          </div>
-        </>
+        <WelcomeScreen
+          language={language}
+          onLanguageChange={setLanguage}
+          onStart={() => setScreen("select")}
+        />
       )}
 
       {/* SELECT */}
