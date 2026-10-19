@@ -2,6 +2,7 @@ import "./globals.css";
 import "./welcome.css";
 import "./experience.css";
 import "./camera.css";
+import "./email.css";
 
 export const metadata = {
   title: "El Tequileño · Photo Booth",

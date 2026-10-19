@@ -2,7 +2,7 @@
   "name": "photobooth-kiosk",
   "version": "0.1.0",
   "private": true,
-  "description": "AI Photo Booth - Fase 2: simulador de kiosco desatendido (Next.js). Selección por presets, captura de cámara, transformación con Nano Banana (Gemini) y salida atómica todo-o-nada.",
+  "description": "Photo booth PWA para el tasting room de El Tequileño: foto, GIF y entrega por correo.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

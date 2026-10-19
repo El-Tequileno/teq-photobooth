@@ -26,8 +26,9 @@ Se corrigió la carga del codificador GIF: en el navegador su exportación por
 defecto es una función, mientras que en Node es un objeto. Se priorizan ahora
 las exportaciones nombradas, evitando el error que solo aparecía en navegador.
 
-La entrega por correo y la instalación/funcionamiento offline como PWA siguen
-pendientes. Los marcos son PNG transparentes exportados de los diseños iniciales con el logo oficial;
+La entrega por correo ya está integrada con Resend; necesita un remitente
+verificado para enviar de verdad. La instalación/funcionamiento offline como PWA
+sigue pendiente. Los marcos son PNG transparentes exportados de los diseños iniciales con el logo oficial;
 no son archivos originales exportados desde Curator.
 
 ## Administrar marcos
@@ -62,6 +63,33 @@ dispositivos físicos.
 npm ci
 npm run dev
 ```
+
+Para activar el envío, configurar en `.env.local` (sin subir este archivo al
+repositorio):
+
+```env
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=photobooth@paradisespirits.com
+```
+
+La clave debe permitir enviar correos y el dominio de `RESEND_FROM_EMAIL` debe
+estar verificado en Resend. Reiniciar el servidor de desarrollo después de
+cambiar estas variables. El botón **Correo** muestra el JPG o GIF completo y
+adaptado al ancho del mensaje, y también envía el archivo original como adjunto;
+el archivo se conserva en memoria hasta terminar la sesión para poder reintentar
+si falla el envío. Resend recibe la imagen para entregarla. No se guardan las
+fotos ni los correos en una base de datos de la app todavía; la libreta de
+contactos solicitada es un paso separado.
+
+Se comprobó el envío de una foto y un GIF sintéticos desde la app a
+`delivered@resend.dev`, la dirección de prueba de Resend. No se usaron fotos ni
+correos de visitantes en esa prueba.
+
+La ruta `/api/send-photo` limita tamaño y frecuencia de peticiones en el proceso
+actual. Antes de publicar el endpoint para acceso general, hace falta un límite
+persistente entre instancias y comprobar el volumen/costo de envío. La app
+requiere conexión a Internet para enviar, aunque la cámara y la creación del
+archivo funcionen localmente.
 
 Abrir la dirección Local que muestre Next.js. Para usar un puerto específico:
 

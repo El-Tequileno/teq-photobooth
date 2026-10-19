@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import WelcomeScreen from "./components/welcome-screen";
 import ExperienceScreen from "./components/experience-screen";
 import CameraScreen from "./components/camera-screen";
+import EmailScreen from "./components/email-screen";
 import { encodeGif } from "../lib/gif";
 import { FRAMES, drawFrame, FRAME_WIDTH, FRAME_HEIGHT } from "../lib/frames";
 
@@ -15,8 +16,12 @@ const COPY = {
     group: "Grupo", groupHint: "Horizontal", portrait: "Retrato", portraitHint: "Vertical",
     hint: "Colócate dentro del encuadre", back: "Volver", capture: "Tomar foto",
     captureGif: "Tomar 3 fotos", loading: "Abriendo cámara…", shot: "Foto",
-    processing: "Preparando tu recuerdo…", download: "Descargar", retake: "Repetir",
+    processing: "Preparando tu recuerdo…", email: "Correo", download: "Descargar", retake: "Repetir",
     done: "Terminar", reset: "Volvemos al inicio en", seconds: "s",
+    sentTitle: "Tu foto va en camino", sentHint: "La enviamos a", sendAnother: "Enviar a otro correo",
+    sendError: "No pudimos enviar la foto. Revisa la conexión e inténtalo de nuevo.",
+    sendNotConfigured: "El envío por correo aún no está configurado. Pide ayuda al personal.",
+    sendRateLimited: "Hubo muchos envíos seguidos. Espera unos minutos e inténtalo de nuevo.",
     cameraError: "No pudimos abrir la cámara",
     cameraHelp: "Revisa el permiso de cámara del navegador y vuelve a intentarlo.",
     captureError: "No pudimos completar la captura", captureHelp: "Puedes volver a intentarlo.",
@@ -28,8 +33,12 @@ const COPY = {
     group: "Group", groupHint: "Landscape", portrait: "Portrait", portraitHint: "Vertical",
     hint: "Step inside the frame", back: "Back", capture: "Take photo",
     captureGif: "Take 3 photos", loading: "Opening camera…", shot: "Photo",
-    processing: "Preparing your memory…", download: "Download", retake: "Retake",
+    processing: "Preparing your memory…", email: "Email", download: "Download", retake: "Retake",
     done: "Done", reset: "Returning to start in", seconds: "s",
+    sentTitle: "Your photo is on its way", sentHint: "We sent it to", sendAnother: "Send to another email",
+    sendError: "We couldn't send your photo. Check the connection and try again.",
+    sendNotConfigured: "Email delivery isn't configured yet. Please ask a staff member for help.",
+    sendRateLimited: "There have been too many sends. Wait a few minutes and try again.",
     cameraError: "We could not open the camera",
     cameraHelp: "Check your browser's camera permission and try again.",
     captureError: "We could not complete the capture", captureHelp: "Please try again.",
@@ -52,6 +61,10 @@ export default function Kiosk() {
   const [shot, setShot] = useState(0);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
+  const [resultBlob, setResultBlob] = useState(null);
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [sendId, setSendId] = useState(null);
   const [resetIn, setResetIn] = useState(RESULT_RESET_S);
   const [errorKind, setErrorKind] = useState("camera");
   const [cameraFailure, setCameraFailure] = useState("");
@@ -60,6 +73,7 @@ export default function Kiosk() {
   const idleTimer = useRef(null);
   const captureRun = useRef(0);
   const capturing = useRef(false);
+  const sending = useRef(false);
   const frameImage = frameImages[frameId];
   const frameError = Boolean(frameErrors[frameId]);
   const copy = COPY[language];
@@ -112,6 +126,10 @@ export default function Kiosk() {
     setCountdown(0);
     setShot(0);
     setResult(null);
+    setResultBlob(null);
+    setEmail("");
+    setEmailError("");
+    setSendId(null);
   }, [stopCamera]);
 
   const resetToAttract = useCallback(() => {
@@ -124,7 +142,7 @@ export default function Kiosk() {
 
   const kickIdle = useCallback(() => {
     clearTimeout(idleTimer.current);
-    if (screen === "attract" || screen === "processing" || screen === "result" || busy) return;
+    if (["attract", "processing", "result", "sending", "sent"].includes(screen) || busy) return;
     idleTimer.current = setTimeout(resetToAttract, IDLE_RESET_S * 1000);
   }, [screen, busy, resetToAttract]);
 
@@ -172,7 +190,7 @@ export default function Kiosk() {
   }, [screen, stopCamera]);
 
   useEffect(() => {
-    if (screen !== "result") return;
+    if (screen !== "result" && screen !== "sent") return;
     setResetIn(RESULT_RESET_S);
     const interval = setInterval(() => setResetIn(value => Math.max(0, value - 1)), 1000);
     const timeout = setTimeout(resetToAttract, RESULT_RESET_S * 1000);
@@ -231,7 +249,9 @@ export default function Kiosk() {
         : await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", .92));
       if (captureRun.current !== run) return;
       if (!blob) throw new Error("Capture could not be encoded");
+      setResultBlob(blob);
       setResult(URL.createObjectURL(blob));
+      setSendId(crypto.randomUUID());
       setScreen("result");
     } catch (error) {
       if (captureRun.current === run) {
@@ -243,8 +263,43 @@ export default function Kiosk() {
     }
   };
 
+  const updateEmail = value => {
+    setEmail(value);
+    setEmailError("");
+    setSendId(crypto.randomUUID());
+    kickIdle();
+  };
+
+  const sendPhoto = async () => {
+    if (!resultBlob || !sendId || sending.current || !email.trim()) return;
+    sending.current = true;
+    setEmailError("");
+    setScreen("sending");
+    const form = new FormData();
+    form.append("email", email.trim());
+    form.append("language", language);
+    form.append("kind", captureType);
+    form.append("requestId", sendId);
+    form.append("photo", resultBlob, `el-tequileno.${captureType === "gif" ? "gif" : "jpg"}`);
+    try {
+      const response = await fetch("/api/send-photo", { method: "POST", body: form, signal: AbortSignal.timeout(35000) });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setEmailError(data.code === "not_configured" ? copy.sendNotConfigured : data.code === "rate_limited" ? copy.sendRateLimited : copy.sendError);
+        setScreen("email");
+        return;
+      }
+      setScreen("sent");
+    } catch {
+      setEmailError(copy.sendError);
+      setScreen("email");
+    } finally {
+      sending.current = false;
+    }
+  };
+
   return (
-    <main className={`kiosk ${screen === "attract" || screen === "select" ? "kiosk--welcome" : screen === "camera" ? "kiosk--camera" : "kiosk--message"}`} onPointerDown={kickIdle}>
+    <main className={`kiosk ${screen === "attract" || screen === "select" ? "kiosk--welcome" : screen === "camera" ? "kiosk--camera" : screen === "email" || screen === "sending" ? "kiosk--email" : "kiosk--message"}`} onPointerDown={kickIdle}>
       {screen === "attract" && (
         <WelcomeScreen language={language} onLanguageChange={setLanguage} onStart={() => setScreen("select")} />
       )}
@@ -265,8 +320,26 @@ export default function Kiosk() {
             <img className="print-img print-img--portrait" src={result} alt={modeName} />
           </div>
           <div className="result-actions">
-            <a className="btn btn-primary result-download" href={result} download={`el-tequileno.${captureType === "gif" ? "gif" : "jpg"}`}>{copy.download}</a>
+            <button type="button" className="btn btn-primary" onClick={() => setScreen("email")}>{copy.email}</button>
+            <a className="btn btn-ghost result-download" href={result} download={`el-tequileno.${captureType === "gif" ? "gif" : "jpg"}`}>{copy.download}</a>
             <button type="button" className="btn btn-ghost" onClick={() => { clearCapture(); setScreen("camera"); }}>{copy.retake}</button>
+            <button type="button" className="btn btn-ghost" onClick={resetToAttract}>{copy.done}</button>
+          </div>
+          <p className="reset-note">{copy.reset} {resetIn}{copy.seconds}…</p>
+        </div>
+      )}
+      {(screen === "email" || screen === "sending") && (
+        <EmailScreen language={language} email={email} onEmailChange={updateEmail}
+          onBack={() => { setEmailError(""); setScreen("result"); }} onSend={sendPhoto}
+          error={emailError} sending={screen === "sending"} />
+      )}
+      {screen === "sent" && (
+        <div className="email-success stage-content" role="status">
+          <h1>{copy.sentTitle}</h1>
+          <p>{copy.sentHint} <strong>{email}</strong></p>
+          <div className="print print--portrait"><img className="print-img print-img--portrait" src={result} alt={modeName} /></div>
+          <div className="result-actions">
+            <button type="button" className="btn btn-primary" onClick={() => { setEmail(""); setSendId(crypto.randomUUID()); setScreen("email"); }}>{copy.sendAnother}</button>
             <button type="button" className="btn btn-ghost" onClick={resetToAttract}>{copy.done}</button>
           </div>
           <p className="reset-note">{copy.reset} {resetIn}{copy.seconds}…</p>
