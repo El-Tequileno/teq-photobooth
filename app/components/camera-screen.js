@@ -7,7 +7,7 @@ function FrameOverlay({ image, thumbnail = false }) {
     : <span className={className} aria-hidden="true" />;
 }
 
-export default function CameraScreen({ language, captureType, frameId, onFrameChange, frameImages, videoRef, cameraReady, frameError, countdown, shot, busy, testCamera, onReady, onCapture, onBack }) {
+export default function CameraScreen({ language, captureType, frameId, onFrameChange, frameImages, videoRef, backdropVideoRef, phoneCamera, cameraReady, frameError, countdown, shot, busy, testCamera, onReady, onCapture, onBack }) {
   const isSpanish = language === "es";
   const frameImage = frameImages[frameId];
   const total = captureType === "gif" ? 3 : 1;
@@ -29,8 +29,10 @@ export default function CameraScreen({ language, captureType, frameId, onFrameCh
       </header>
 
       <div className="camera-stage">
-        <div className="camera-viewfinder">
-          <video ref={videoRef} className="camera-video" autoPlay playsInline muted onLoadedData={onReady} onPlaying={onReady} />
+        <div className={`camera-viewfinder${phoneCamera ? " camera-viewfinder--phone" : ""}`}>
+          {phoneCamera && <video ref={backdropVideoRef} className="camera-video camera-video--backdrop" autoPlay playsInline muted aria-hidden="true" />}
+          {phoneCamera && <span className="camera-video-dimmer" aria-hidden="true" />}
+          <video ref={videoRef} className="camera-video camera-video--main" autoPlay playsInline muted onLoadedData={onReady} onPlaying={onReady} />
           <FrameOverlay image={frameImage} />
           {testCamera && <span className="camera-test-label">{isSpanish ? "Cámara de prueba" : "Test camera"}</span>}
           {countdown > 0 && <div className="camera-countdown" role="status" aria-label={`${isSpanish ? "Cuenta regresiva" : "Countdown"}: ${countdown}`} key={`${shot}-${countdown}`}>{countdown}</div>}

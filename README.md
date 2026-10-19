@@ -11,8 +11,8 @@ photobooth-kiosk; interfaz inspirada en las referencias de Curator Live.
 
 Las dos opciones abren la cámara reutilizada del prototipo, ahora traducida.
 Foto genera un JPEG. GIF captura tres fotos con cuenta regresiva independiente y
-reproduce las tres en bucle. La captura se recorta para coincidir con la vista
-previa y se procesa localmente. El resultado permite compartir en teléfonos y repetir.
+reproduce las tres en bucle. El resultado coincide con la vista previa y se
+procesa localmente. Permite compartir en teléfonos y repetir.
 No hay llamadas a IA, impresión ni un QR de demostración en el flujo de usuario.
 Los archivos se liberan de la memoria al repetir, terminar o vencer la sesión.
 
@@ -66,6 +66,10 @@ la cámara queda junto a los controles; el encuadre conserva siempre la proporci
 2:3 del PNG y de la captura. Los marcos tienen desplazamiento horizontal cuando
 no caben, y los botones del resultado se reorganizan en pantallas pequeñas.
 Las pantallas muy bajas permiten desplazarse sin cortar el inicio del contenido.
+En teléfonos, la cámara muestra toda la imagen sin ampliar el recorte para
+llenar el marco vertical. Una copia oscurecida rellena los espacios laterales o
+superiores; el JPEG y cada fotograma del GIF usan el mismo encuadre. En la
+tablet fija y en computadoras se conserva el encuadre anterior.
 
 El botón **Compartir** entrega el JPG o GIF al menú nativo del teléfono; en
 iPhone se puede elegir **Guardar imagen** para conservar el GIF animado en Fotos.
@@ -151,6 +155,8 @@ Para una prueba de desarrollo sin webcam, abrir `/?camera=test`. Solo funciona
 en modo desarrollo y muestra «Cámara de prueba»; se genera una escena animada
 localmente y se recorre exactamente la misma captura y codificación. La URL
 normal `/` siempre utiliza la cámara real del dispositivo.
+Para revisar el encuadre de celular con una señal de cámara ancha en una
+computadora, usar `/?camera=test-wide&phone=test` en desarrollo.
 
 ## Verificación
 

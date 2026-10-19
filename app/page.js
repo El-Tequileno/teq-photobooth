@@ -8,6 +8,7 @@ import EmailScreen from "./components/email-screen";
 import { encodeGif } from "../lib/gif";
 import { FRAMES, drawFrame, FRAME_WIDTH, FRAME_HEIGHT } from "../lib/frames";
 import { isPhoneDevice } from "../lib/share-availability";
+import { drawMirroredVideo } from "../lib/camera-fit";
 
 const IDLE_RESET_S = 90;
 const RESULT_RESET_S = 60;
@@ -64,6 +65,7 @@ export default function Kiosk() {
   const [frameId, setFrameId] = useState(FRAMES[0].id);
   const [frameImages, setFrameImages] = useState({});
   const [frameErrors, setFrameErrors] = useState({});
+  const [phoneCamera, setPhoneCamera] = useState(false);
   const [testCamera, setTestCamera] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -85,6 +87,7 @@ export default function Kiosk() {
   const [errorKind, setErrorKind] = useState("camera");
   const [cameraFailure, setCameraFailure] = useState("");
   const videoRef = useRef(null);
+  const backdropVideoRef = useRef(null);
   const streamRef = useRef(null);
   const idleTimer = useRef(null);
   const captureRun = useRef(0);
@@ -125,6 +128,11 @@ export default function Kiosk() {
   }, []);
 
   useEffect(() => { document.documentElement.lang = language; }, [language]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const phonePreview = process.env.NODE_ENV === "development" && params.get("phone") === "test";
+    setPhoneCamera(isPhoneDevice(navigator) || phonePreview);
+  }, []);
   useEffect(() => () => { if (result) URL.revokeObjectURL(result); }, [result]);
   useEffect(() => {
     if (!resultBlob || !isPhoneDevice(navigator, window.location.search) ||
@@ -205,24 +213,40 @@ export default function Kiosk() {
     setCameraReady(false);
     (async () => {
       try {
-        const useTestCamera = process.env.NODE_ENV === "development" && new URLSearchParams(window.location.search).get("camera") === "test";
+        const cameraMode = new URLSearchParams(window.location.search).get("camera");
+        const useTestCamera = process.env.NODE_ENV === "development" && (cameraMode === "test" || cameraMode === "test-wide");
         setTestCamera(useTestCamera);
         let stream;
         if (useTestCamera) {
           const { createTestCamera } = await import("../lib/test-camera");
           if (cancelled) return;
-          const test = createTestCamera();
+          const test = createTestCamera({ wide: cameraMode === "test-wide" });
           stream = test.stream;
           stopTestCamera = test.stop;
         } else {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "user", width: { ideal: 1080 }, height: { ideal: 1620 } },
+            video: phoneCamera
+              ? { facingMode: "user", resizeMode: "none" }
+              : { facingMode: "user", width: { ideal: 1080 }, height: { ideal: 1620 } },
             audio: false,
           });
+        }
+        if (phoneCamera) {
+          try {
+            const track = stream.getVideoTracks()[0];
+            const minZoom = track?.getCapabilities?.()?.zoom?.min;
+            const currentZoom = track?.getSettings?.()?.zoom;
+            if (Number.isFinite(minZoom) && Number.isFinite(currentZoom) && currentZoom > minZoom) {
+              await track.applyConstraints({ advanced: [{ zoom: minZoom }] });
+            }
+          } catch {
+            // Zoom controls are optional; keep the camera open when unavailable.
+          }
         }
         if (cancelled) { stream.getTracks().forEach(track => track.stop()); return; }
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
+        if (backdropVideoRef.current) backdropVideoRef.current.srcObject = stream;
       } catch (error) {
         if (!cancelled) {
           console.error(`[TEQ camera] ${error.name}: ${error.message}`);
@@ -232,7 +256,7 @@ export default function Kiosk() {
       }
     })();
     return () => { cancelled = true; stopCamera(); stopTestCamera?.(); };
-  }, [screen, stopCamera]);
+  }, [screen, stopCamera, phoneCamera]);
 
   useEffect(() => {
     if ((screen !== "result" && screen !== "sent") || sharing) return;
@@ -274,15 +298,13 @@ export default function Kiosk() {
         canvas.height = Math.round(canvas.width * FRAME_HEIGHT / FRAME_WIDTH);
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Canvas context is unavailable");
-        // Match object-fit: cover in the preview, then mirror the photo only.
-        const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
-        const width = video.videoWidth * scale;
-        const height = video.videoHeight * scale;
-        ctx.save();
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
-        ctx.restore();
+        if (phoneCamera) {
+          // Keep the entire mobile camera image visible; a darkened copy fills any side bands.
+          drawMirroredVideo(ctx, video, canvas.width, canvas.height, "cover");
+          ctx.fillStyle = "rgba(0, 0, 0, .58)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        drawMirroredVideo(ctx, video, canvas.width, canvas.height, phoneCamera ? "contain" : "cover");
         drawFrame(ctx, frameImage, canvas.width, canvas.height);
         if (total === 3) frames.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
         if (index < total - 1) { await wait(350); if (captureRun.current !== run) return; }
@@ -385,6 +407,7 @@ export default function Kiosk() {
       {screen === "camera" && (
         <CameraScreen language={language} captureType={captureType} frameId={frameId}
           onFrameChange={setFrameId} frameImages={frameImages} frameError={frameError} videoRef={videoRef}
+          backdropVideoRef={backdropVideoRef} phoneCamera={phoneCamera}
           cameraReady={cameraReady} countdown={countdown} shot={shot} busy={busy}
           testCamera={testCamera} onReady={() => setCameraReady(Boolean(videoRef.current?.videoWidth && videoRef.current?.videoHeight))}
           onCapture={startCapture} onBack={backToSelection} />
