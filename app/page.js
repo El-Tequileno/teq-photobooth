@@ -7,6 +7,7 @@ import CameraScreen from "./components/camera-screen";
 import EmailScreen from "./components/email-screen";
 import { encodeGif } from "../lib/gif";
 import { FRAMES, drawFrame, FRAME_WIDTH, FRAME_HEIGHT } from "../lib/frames";
+import { shouldShowDownload } from "../lib/download-visibility";
 
 const IDLE_RESET_S = 90;
 const RESULT_RESET_S = 60;
@@ -68,6 +69,7 @@ export default function Kiosk() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [resultBlob, setResultBlob] = useState(null);
+  const [showDownload, setShowDownload] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [marketingOptIn, setMarketingOptIn] = useState(false);
@@ -88,6 +90,7 @@ export default function Kiosk() {
   const frameError = Boolean(frameErrors[frameId]);
   const copy = COPY[language];
   const modeName = captureType === "gif" ? copy.gif : copy.photo;
+  const resultFilename = `el-tequileno.${captureType === "gif" ? "gif" : "jpg"}`;
   const cameraHelp = cameraFailure === "NotAllowedError" || cameraFailure === "SecurityError"
     ? (language === "es" ? "El sistema o el navegador bloqueó la cámara. Habilita su permiso para esta aplicación y vuelve a intentarlo." : "The system or browser blocked the camera. Allow camera access for this app and try again.")
     : cameraFailure === "NotFoundError"
@@ -120,13 +123,18 @@ export default function Kiosk() {
   useEffect(() => { document.documentElement.lang = language; }, [language]);
   useEffect(() => () => { if (result) URL.revokeObjectURL(result); }, [result]);
   useEffect(() => {
+    setShowDownload(shouldShowDownload(navigator, window.location.search));
+  }, []);
+  useEffect(() => {
+    if (screen !== "email") return;
     let active = true;
-    fetch("/api/contact-settings")
+    setMarketingEnabled(false);
+    fetch("/api/contact-settings", { cache: "no-store" })
       .then(response => response.ok ? response.json() : null)
       .then(settings => { if (active) setMarketingEnabled(Boolean(settings?.marketingEnabled)); })
       .catch(() => { if (active) setMarketingEnabled(false); });
     return () => { active = false; };
-  }, []);
+  }, [screen]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -359,7 +367,7 @@ export default function Kiosk() {
           </div>
           <div className="result-actions">
             <button type="button" className="btn btn-primary" onClick={() => setScreen("email")}>{copy.email}</button>
-            <a className="btn btn-ghost result-download" href={result} download={`el-tequileno.${captureType === "gif" ? "gif" : "jpg"}`}>{copy.download}</a>
+            {showDownload && <a className="btn btn-ghost result-download" href={result} download={resultFilename}>{copy.download}</a>}
             <button type="button" className="btn btn-ghost" onClick={() => { clearCapture(); setScreen("camera"); }}>{copy.retake}</button>
             <button type="button" className="btn btn-ghost" onClick={resetToAttract}>{copy.done}</button>
           </div>

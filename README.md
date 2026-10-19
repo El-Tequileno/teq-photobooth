@@ -52,6 +52,13 @@ la cámara queda junto a los controles; el encuadre conserva siempre la proporci
 no caben, y los botones del resultado se reorganizan en pantallas pequeñas.
 Las pantallas muy bajas permiten desplazarse sin cortar el inicio del contenido.
 
+El botón **Descargar** guarda el JPG o GIF mediante la descarga normal del
+navegador, sin abrir el menú Compartir. Aparece en teléfonos y computadoras,
+pero se oculta en iPad y tablets Android. En el dispositivo fijo del booth
+también se puede forzar su ocultación con `?kiosk=1` en la URL. La ubicación
+del archivo descargado depende del navegador; en iPhone no se guarda
+automáticamente en Fotos.
+
 Verificado en el navegador con tamaños de 320 × 568, 360 × 640, 390 × 844,
 430 × 932, 568 × 320, 844 × 390, 768 × 1024 y 1280 × 720, además de foto y GIF
 con cámara de prueba. Falta verificar permisos/captura en Safari y Chrome de
