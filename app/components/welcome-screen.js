@@ -56,11 +56,9 @@ export default function WelcomeScreen({ language, onLanguageChange, onStart }) {
       <div className="welcome-collage" aria-hidden="true">
         <div className="welcome-print welcome-print--left">
           <div className="welcome-print-art welcome-print-art--gold"><Agave /></div>
-          <span>EL TEQUILEÑO</span>
         </div>
         <div className="welcome-print welcome-print--right">
           <div className="welcome-print-art welcome-print-art--red"><Agave /></div>
-          <span>EL TEQUILEÑO</span>
         </div>
         <div className="welcome-print welcome-print--front">
           <div className="welcome-print-art welcome-print-art--blue">
