@@ -22,6 +22,9 @@ const COPY = {
     sendError: "No pudimos enviar la foto. Revisa la conexión e inténtalo de nuevo.",
     sendNotConfigured: "El envío por correo aún no está configurado. Pide ayuda al personal.",
     sendRateLimited: "Hubo muchos envíos seguidos. Espera unos minutos e inténtalo de nuevo.",
+    marketingUnavailable: "La suscripción aún no está disponible. Desmarca la casilla para enviar tu foto.",
+    contactNotSaved: "La foto se envió, pero no pudimos guardar tus datos. Avisa al personal.",
+    marketingNotSubscribed: "La foto se envió, pero no pudimos activar las comunicaciones por correo.",
     cameraError: "No pudimos abrir la cámara",
     cameraHelp: "Revisa el permiso de cámara del navegador y vuelve a intentarlo.",
     captureError: "No pudimos completar la captura", captureHelp: "Puedes volver a intentarlo.",
@@ -39,6 +42,9 @@ const COPY = {
     sendError: "We couldn't send your photo. Check the connection and try again.",
     sendNotConfigured: "Email delivery isn't configured yet. Please ask a staff member for help.",
     sendRateLimited: "There have been too many sends. Wait a few minutes and try again.",
+    marketingUnavailable: "Email signup is not available yet. Uncheck the box to send your photo.",
+    contactNotSaved: "Your photo was sent, but we could not save your details. Please tell a staff member.",
+    marketingNotSubscribed: "Your photo was sent, but we could not activate promotional emails.",
     cameraError: "We could not open the camera",
     cameraHelp: "Check your browser's camera permission and try again.",
     captureError: "We could not complete the capture", captureHelp: "Please try again.",
@@ -62,8 +68,12 @@ export default function Kiosk() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [resultBlob, setResultBlob] = useState(null);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [marketingEnabled, setMarketingEnabled] = useState(false);
   const [emailError, setEmailError] = useState("");
+  const [contactWarning, setContactWarning] = useState("");
   const [sendId, setSendId] = useState(null);
   const [resetIn, setResetIn] = useState(RESULT_RESET_S);
   const [errorKind, setErrorKind] = useState("camera");
@@ -109,6 +119,14 @@ export default function Kiosk() {
 
   useEffect(() => { document.documentElement.lang = language; }, [language]);
   useEffect(() => () => { if (result) URL.revokeObjectURL(result); }, [result]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/contact-settings")
+      .then(response => response.ok ? response.json() : null)
+      .then(settings => { if (active) setMarketingEnabled(Boolean(settings?.marketingEnabled)); })
+      .catch(() => { if (active) setMarketingEnabled(false); });
+    return () => { active = false; };
+  }, []);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -127,8 +145,11 @@ export default function Kiosk() {
     setShot(0);
     setResult(null);
     setResultBlob(null);
+    setName("");
     setEmail("");
+    setMarketingOptIn(false);
     setEmailError("");
+    setContactWarning("");
     setSendId(null);
   }, [stopCamera]);
 
@@ -270,13 +291,29 @@ export default function Kiosk() {
     kickIdle();
   };
 
+  const updateName = value => {
+    setName(value);
+    setEmailError("");
+    setSendId(crypto.randomUUID());
+    kickIdle();
+  };
+
+  const updateMarketingOptIn = value => {
+    setMarketingOptIn(value);
+    setEmailError("");
+    setSendId(crypto.randomUUID());
+    kickIdle();
+  };
+
   const sendPhoto = async () => {
-    if (!resultBlob || !sendId || sending.current || !email.trim()) return;
+    if (!resultBlob || !sendId || sending.current || !name.trim() || !email.trim()) return;
     sending.current = true;
     setEmailError("");
     setScreen("sending");
     const form = new FormData();
+    form.append("name", name.trim());
     form.append("email", email.trim());
+    form.append("marketingOptIn", String(marketingOptIn && marketingEnabled));
     form.append("language", language);
     form.append("kind", captureType);
     form.append("requestId", sendId);
@@ -285,10 +322,11 @@ export default function Kiosk() {
       const response = await fetch("/api/send-photo", { method: "POST", body: form, signal: AbortSignal.timeout(35000) });
       const data = await response.json();
       if (!response.ok || !data.ok) {
-        setEmailError(data.code === "not_configured" ? copy.sendNotConfigured : data.code === "rate_limited" ? copy.sendRateLimited : copy.sendError);
+        setEmailError(data.code === "not_configured" ? copy.sendNotConfigured : data.code === "rate_limited" ? copy.sendRateLimited : data.code === "marketing_unavailable" ? copy.marketingUnavailable : copy.sendError);
         setScreen("email");
         return;
       }
+      setContactWarning(!data.contactSaved ? copy.contactNotSaved : marketingOptIn && !data.marketingSubscribed ? copy.marketingNotSubscribed : "");
       setScreen("sent");
     } catch {
       setEmailError(copy.sendError);
@@ -329,7 +367,8 @@ export default function Kiosk() {
         </div>
       )}
       {(screen === "email" || screen === "sending") && (
-        <EmailScreen language={language} email={email} onEmailChange={updateEmail}
+        <EmailScreen language={language} name={name} email={email} marketingOptIn={marketingOptIn} marketingEnabled={marketingEnabled}
+          onNameChange={updateName} onEmailChange={updateEmail} onMarketingChange={updateMarketingOptIn}
           onBack={() => { setEmailError(""); setScreen("result"); }} onSend={sendPhoto}
           error={emailError} sending={screen === "sending"} />
       )}
@@ -337,9 +376,10 @@ export default function Kiosk() {
         <div className="email-success stage-content" role="status">
           <h1>{copy.sentTitle}</h1>
           <p>{copy.sentHint} <strong>{email}</strong></p>
+          {contactWarning && <p className="email-contact-warning">{contactWarning}</p>}
           <div className="print print--portrait"><img className="print-img print-img--portrait" src={result} alt={modeName} /></div>
           <div className="result-actions">
-            <button type="button" className="btn btn-primary" onClick={() => { setEmail(""); setSendId(crypto.randomUUID()); setScreen("email"); }}>{copy.sendAnother}</button>
+            <button type="button" className="btn btn-primary" onClick={() => { setName(""); setEmail(""); setMarketingOptIn(false); setContactWarning(""); setSendId(crypto.randomUUID()); setScreen("email"); }}>{copy.sendAnother}</button>
             <button type="button" className="btn btn-ghost" onClick={resetToAttract}>{copy.done}</button>
           </div>
           <p className="reset-note">{copy.reset} {resetIn}{copy.seconds}…</p>

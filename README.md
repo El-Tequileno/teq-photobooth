@@ -74,12 +74,37 @@ RESEND_FROM_EMAIL=photobooth@paradisespirits.com
 
 La clave debe permitir enviar correos y el dominio de `RESEND_FROM_EMAIL` debe
 estar verificado en Resend. Reiniciar el servidor de desarrollo después de
-cambiar estas variables. El botón **Correo** muestra el JPG o GIF completo y
-adaptado al ancho del mensaje, y también envía el archivo original como adjunto;
-el archivo se conserva en memoria hasta terminar la sesión para poder reintentar
-si falla el envío. Resend recibe la imagen para entregarla. No se guardan las
-fotos ni los correos en una base de datos de la app todavía; la libreta de
-contactos solicitada es un paso separado.
+cambiar estas variables. El correo contiene solo el mensaje y un archivo JPG o
+GIF adjunto. El archivo se conserva en memoria hasta terminar la sesión para
+poder reintentar si falla el envío. Resend recibe la imagen para entregarla.
+
+## Contactos en ActiveCampaign
+
+En **Configuración → Desarrollador** de ActiveCampaign, copiar la URL y clave API
+en `.env.local` (no en el navegador ni en Git):
+
+```env
+ACTIVECAMPAIGN_API_URL=https://tu-cuenta.api-us1.com
+ACTIVECAMPAIGN_API_KEY=tu_clave
+```
+
+Con ambas variables, cada envío registra o actualiza el contacto usando su correo
+y nombre, y agrega únicamente la etiqueta `photobooth`. La foto nunca se sube a
+ActiveCampaign. Si la integración falla, la foto se envía de todos modos y la
+pantalla avisa que los datos no se guardaron. Sin base de datos o cola propia no
+hay reintento automático duradero para ese registro.
+
+Para activar la casilla opcional de comunicaciones, crear primero la lista de
+marketing en ActiveCampaign y agregar su ID numérico a `.env.local`:
+
+```env
+ACTIVECAMPAIGN_MARKETING_LIST_ID=123
+```
+
+Sin ese ID, la casilla aparece deshabilitada y la foto sigue pudiendo enviarse.
+Con consentimiento marcado se suscribe al contacto a la lista; sin marcar, no se
+modifica su suscripción de marketing. Un contacto que ya canceló
+su suscripción o rebotó no se reactiva desde el kiosco.
 
 Se comprobó el envío de una foto y un GIF sintéticos desde la app a
 `delivered@resend.dev`, la dirección de prueba de Resend. No se usaron fotos ni
