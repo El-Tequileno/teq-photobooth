@@ -1,5 +1,7 @@
 import "./globals.css";
 import "./welcome.css";
+import "./experience.css";
+import "./camera.css";
 
 export const metadata = {
   title: "El Tequileño · Photo Booth",
@@ -9,8 +11,7 @@ export const metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }) {

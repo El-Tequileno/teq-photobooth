@@ -1,93 +1,107 @@
-# TEQ Photobooth — paso 1: bienvenida e idioma
+# TEQ Photobooth
 
-Photo booth para el tasting room de El Tequileño, adaptado desde
-`photobooth-kiosk`. El producto final usará fotografías con marcos
-preestablecidos, sin IA ni impresión.
+Photo booth para el tasting room de El Tequileño. Base reutilizada de
+photobooth-kiosk; interfaz inspirada en las referencias de Curator Live.
 
-Este primer paso incluye:
+## Estado por pasos
 
-- Bienvenida inspirada en las referencias de Curator: fondo rojizo, trama de
-  puntos, agave y tarjetas decorativas.
-- Logo oficial blanco de El Tequileño, reutilizado de los recursos de marca
-  locales del proyecto El TEQ Game.
-- Selector Español / English en la primera pantalla, con selección visible,
-  textos traducidos y actualización del idioma del documento.
-- Vuelta al español al reiniciar una sesión para el siguiente visitante.
-- Fuentes del sistema, sin descargas de fuentes externas.
+1. Bienvenida con logo oficial y selección Español / English.
+2. Selección de Foto o GIF de tres fotografías, con fondo azul y botones dorados.
+   Volver a la bienvenida conserva el idioma; terminar una sesión vuelve al español.
 
-Las tarjetas son ilustraciones decorativas, no fotografías de visitantes.
-El SVG del logo se conserva sin modificar sus trazados.
+Las dos opciones abren la cámara reutilizada del prototipo, ahora traducida.
+Foto genera un JPEG. GIF captura tres fotos con cuenta regresiva independiente y
+reproduce las tres en bucle. La captura se recorta para coincidir con la vista
+previa y se procesa localmente. El resultado permite descargar y repetir.
+No hay llamadas a IA, impresión ni un QR de demostración en el flujo de usuario.
+Los archivos se liberan de la memoria al repetir, terminar o vencer la sesión.
 
-**Las pantallas posteriores y las rutas internas siguen siendo las del prototipo
-original.** Los siguientes pasos sustituirán ese flujo por foto/GIF, cámara con
-marcos, entrega por correo y preparación como PWA. La bienvenida se puede
-revisar sin configurar servicios externos.
+3. Cámara vertical con fondo oscuro, marco blanco/negro, logo y cuenta regresiva
+   grande, siguiendo la referencia. Tres marcos preestablecidos (Clásico, Agave
+   y Celebración) se seleccionan en vivo sin reiniciar la cámara. El mismo PNG
+   se aplica a la vista previa y a todas las fotografías del GIF. Los logos y
+   textos quedan derechos aunque la vista de cámara sea de espejo.
 
-## Revisar este paso
+Se corrigió la carga del codificador GIF: en el navegador su exportación por
+defecto es una función, mientras que en Node es un objeto. Se priorizan ahora
+las exportaciones nombradas, evitando el error que solo aparecía en navegador.
+
+La entrega por correo y la instalación/funcionamiento offline como PWA siguen
+pendientes. Los marcos son PNG transparentes exportados de los diseños iniciales con el logo oficial;
+no son archivos originales exportados desde Curator.
+
+## Administrar marcos
+
+Los PNG se guardan en `public/frames/` y la lista de marcos se configura en
+`public/frames/frames.json` (archivo, nombre en español e inglés y orden).
+Para cambiar un diseño basta reemplazar su PNG; para añadir o quitar opciones,
+editar la lista. Usar 1080 × 1620 px con el área de la foto transparente.
+La vista previa, las miniaturas y la captura utilizan el mismo archivo; no se
+habilita el disparo hasta que el marco seleccionado esté cargado y tenga la
+proporción correcta. Un archivo que falle no impide utilizar los otros marcos.
+Ver `public/frames/README.md` para las instrucciones completas. Todavía no hay
+una pantalla de administración para subir archivos.
+
+## Celular y tablet
+
+La bienvenida, selección, cámara y resultado se adaptan al ancho y a la altura
+disponibles, incluyendo las barras del navegador y áreas seguras. En horizontal
+la cámara queda junto a los controles; el encuadre conserva siempre la proporción
+2:3 del PNG y de la captura. Los marcos tienen desplazamiento horizontal cuando
+no caben, y los botones del resultado se reorganizan en pantallas pequeñas.
+Las pantallas muy bajas permiten desplazarse sin cortar el inicio del contenido.
+
+Verificado en el navegador con tamaños de 320 × 568, 360 × 640, 390 × 844,
+430 × 932, 568 × 320, 844 × 390, 768 × 1024 y 1280 × 720, además de foto y GIF
+con cámara de prueba. Falta verificar permisos/captura en Safari y Chrome de
+dispositivos físicos.
+
+## Desarrollo
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Abrir la dirección Local que muestre Next.js. Para elegir un puerto, usar
-`npm run dev -- --port 3001`. Compilar con `npm run build`.
+Abrir la dirección Local que muestre Next.js. Para usar un puerto específico:
 
-Archivos principales: `app/components/welcome-screen.js`, `app/welcome.css`,
-`app/page.js`, `app/layout.js` y `public/brand/el-tequileno-white.svg`.
-
----
-
-## Documentación del prototipo original (pendiente de sustituir)
-
-Mini Next.js app that simulates the **unattended kiosk**: the guest taps the screen,
-picks a template, takes a photo, and receives their transformed version. Reuses the
-pipeline you validated in Phase 1 (Nano Banana / Gemini), now wrapped in the real
-booth experience: attract → choose → capture → reveal → result, then back to start
-on its own with no operator.
-
-## Run
-
-```bash
-npm install
-cp .env.local.example .env.local     # paste your GEMINI_API_KEY
-npm run dev                           # http://localhost:3000
+```sh
+npm run dev -- --port 3001
 ```
 
-For the real booth: `npm run build && npm run kiosk` and open Chrome in kiosk mode
-(full screen, `--kiosk`). The camera requires `localhost` or **HTTPS**
-(getUserMedia does not work on remote http).
+La cámara necesita localhost o HTTPS. No hacen falta claves de IA para el flujo
+actual. Las rutas y recursos antiguos de IA e impresión todavía están en el
+repositorio como código heredado, pero la interfaz no los utiliza.
 
-Without `GEMINI_API_KEY` and with `DEMO_MODE=1`, the full flow works for rehearsing
-UX (returns your own photo as a mock — not a real transformation).
+Para una prueba de desarrollo sin webcam, abrir `/?camera=test`. Solo funciona
+en modo desarrollo y muestra «Cámara de prueba»; se genera una escena animada
+localmente y se recorre exactamente la misma captura y codificación. La URL
+normal `/` siempre utiliza la cámara real del dispositivo.
 
-## How it's built (fits the project architecture)
+## Verificación
 
-- **Light client** = `app/page.js`. Camera, touch UI, and one `fetch` call only.
-  Never touches the heavy model. It's the booth's capture machine.
-- **Server** = `app/api/transform/route.js`. API key and Nano Banana call live here.
-  The browser never sees the API key.
-- **"All or nothing" rule**: the server returns either a complete image or an explicit
-  failure; retries up to `MAX_RETRIES` times. The client only renders a returned result
-  or the retry screen. No code path shows a hybrid (edited subject + original background).
-- **Unattended**: idle timer (45 s) resets and **deletes the guest's photo**; the result
-  auto-resets after 30 s for the next guest.
-- **Presets, not free prompt**: `lib/presets.js`. Each template = preview + curated fixed
-  prompt + optional reference image. Prompts include Phase 1 safeguards (real identity and
-  body, full group coverage, high collar/gloves/boots, no brands, 100% background replacement).
+```sh
+npm run build
+```
 
-## Swap in real assets
+Además de compilar, comprobar las dos opciones, ambos idiomas, volver sin perder
+el idioma, permisos de cámara, cancelación de la cuenta regresiva y los tres
+fotogramas del GIF. La prueba de cámara real debe hacerse también en el iPad.
+Si el sistema bloquea la cámara, la interfaz distingue el permiso denegado de
+una cámara inexistente u ocupada. Las imágenes no se incluyen en los registros
+de diagnóstico.
 
-- **Previews**: replace the `.svg` files in `public/presets/` with your best real captures
-  for each template (what the guest sees before posing).
-- **Style reference**: put `traje_referencia.png` in `reference/` to anchor superhero suit
-  color and coverage (same as Phase 1). Each preset's `reference` field points to the file;
-  `null` = text only.
-- **Model**: confirm the string in `.env.local` (`GEMINI_IMAGE_MODEL`). Check what's
-  available at aistudio.google.com; preview naming changes often.
+Verificado en navegador con cámara de prueba y con la webcam real de la laptop:
+selección de marcos, cuenta regresiva, tres capturas y resultado GIF. El archivo
+sintético del codificador también se decodificó por separado para comprobar los
+tres fotogramas, su orden, el intervalo y el bucle. Sigue pendiente la prueba en
+el iPad del booth.
 
-## Verify before the event (Phase 3)
+Tras convertir los marcos a PNG, se verificaron sus dimensiones y transparencia,
+las miniaturas y selección en vivo, un JPEG de 1080 × 1620 y un GIF de 540 × 810
+en el navegador con cámara de prueba. La compilación de producción también pasa.
 
-At a real booth you need to measure what no script metric captures: shareable photo rate,
-end-to-end session time, and how many people scan the QR. The QR currently points to a
-placeholder link; in production the server uploads the image and the QR points to that URL.
+## Recursos de marca
+
+El SVG blanco oficial procede de los recursos locales del proyecto El TEQ Game.
+Las tarjetas de bienvenida son ilustraciones decorativas, no fotos de visitantes.

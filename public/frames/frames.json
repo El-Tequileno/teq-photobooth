@@ -1,0 +1,17 @@
+[
+  {
+    "id": "classic",
+    "name": { "es": "Clásico", "en": "Classic" },
+    "src": "/frames/classic.png"
+  },
+  {
+    "id": "agave",
+    "name": { "es": "Agave", "en": "Agave" },
+    "src": "/frames/agave.png"
+  },
+  {
+    "id": "celebration",
+    "name": { "es": "Celebración", "en": "Celebration" },
+    "src": "/frames/celebration.png"
+  }
+]

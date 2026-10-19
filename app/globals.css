@@ -5,6 +5,7 @@
    ───────────────────────────────────────────────────────────── */
 
 :root {
+  --app-height: 100vh;
   --ink: #0b0a1f;
   --stage: #17123a;
   --stage-2: #241a52;
@@ -19,8 +20,13 @@
   --font-body: "Inter", system-ui, sans-serif;
 }
 
+@supports (height: 100dvh) {
+  :root { --app-height: 100dvh; }
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   font-family: var(--font-body);
@@ -37,11 +43,12 @@ body {
 /* The stage fills the kiosk screen (vertical). */
 .kiosk {
   position: fixed;
-  inset: 0;
+  inset: 0 0 auto;
+  height: var(--app-height);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   text-align: center;
   padding: clamp(20px, 4vw, 56px);
   overflow-y: auto;
@@ -65,7 +72,7 @@ body {
   z-index: 0;
 }
 
-.stage-content { position: relative; z-index: 1; width: 100%; max-width: 860px; }
+.stage-content { position: relative; z-index: 1; width: 100%; max-width: 860px; flex-shrink: 0; min-width: 0; }
 
 /* ── Typography ── */
 .eyebrow {
@@ -117,6 +124,8 @@ body {
   box-shadow: 0 18px 50px -12px rgba(255, 138, 61, 0.55);
 }
 .btn-primary:active { transform: scale(0.96); }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+.result-download { display: inline-block; text-decoration: none; }
 .btn-ghost {
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
