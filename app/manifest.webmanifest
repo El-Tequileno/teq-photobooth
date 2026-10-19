@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "El Tequileño Photo Booth",
+  "short_name": "El Tequileño",
+  "description": "Toma una foto o un GIF con los marcos de El Tequileño.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#983542",
+  "theme_color": "#983542",
+  "lang": "es",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

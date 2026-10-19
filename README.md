@@ -27,9 +27,24 @@ defecto es una función, mientras que en Node es un objeto. Se priorizan ahora
 las exportaciones nombradas, evitando el error que solo aparecía en navegador.
 
 La entrega por correo ya está integrada con Resend; necesita un remitente
-verificado para enviar de verdad. La instalación/funcionamiento offline como PWA
-sigue pendiente. Los marcos son PNG transparentes exportados de los diseños iniciales con el logo oficial;
-no son archivos originales exportados desde Curator.
+verificado para enviar de verdad. La app incluye manifiesto, íconos y service
+worker para instalarse como PWA. Los marcos son PNG transparentes exportados de
+los diseños iniciales con el logo oficial; no son archivos originales de Curator.
+
+## Instalar como PWA
+
+Publicar la app con HTTPS; `localhost` también permite probarla localmente.
+En iPhone o iPad, abrirla en Safari y usar **Compartir → Agregar a pantalla de
+inicio**. En Chrome o Edge, usar la opción **Instalar aplicación** del navegador.
+Abrirla una vez con conexión para que se guarden la interfaz, los marcos y el
+codificador GIF. Después puede abrirse sin conexión para tomar fotos y crear GIF;
+el envío por correo y el registro en ActiveCampaign requieren Internet. Las fotos
+y los datos de visitantes no se guardan en la caché del service worker.
+
+El service worker se registra solo en producción: probar con `npm run build` y
+`npm run start`, o en el sitio publicado. El servidor de desarrollo no lo
+registra para evitar que recursos viejos interfieran con los cambios. La cámara
+requiere permiso del navegador incluso cuando la PWA ya está instalada.
 
 ## Administrar marcos
 
