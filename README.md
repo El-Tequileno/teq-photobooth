@@ -12,7 +12,7 @@ photobooth-kiosk; interfaz inspirada en las referencias de Curator Live.
 Las dos opciones abren la cámara reutilizada del prototipo, ahora traducida.
 Foto genera un JPEG. GIF captura tres fotos con cuenta regresiva independiente y
 reproduce las tres en bucle. La captura se recorta para coincidir con la vista
-previa y se procesa localmente. El resultado permite descargar y repetir.
+previa y se procesa localmente. El resultado permite compartir en teléfonos y repetir.
 No hay llamadas a IA, impresión ni un QR de demostración en el flujo de usuario.
 Los archivos se liberan de la memoria al repetir, terminar o vencer la sesión.
 
@@ -52,12 +52,11 @@ la cámara queda junto a los controles; el encuadre conserva siempre la proporci
 no caben, y los botones del resultado se reorganizan en pantallas pequeñas.
 Las pantallas muy bajas permiten desplazarse sin cortar el inicio del contenido.
 
-El botón **Descargar** guarda el JPG o GIF mediante la descarga normal del
-navegador, sin abrir el menú Compartir. Aparece en teléfonos y computadoras,
-pero se oculta en iPad y tablets Android. En el dispositivo fijo del booth
-también se puede forzar su ocultación con `?kiosk=1` en la URL. La ubicación
-del archivo descargado depende del navegador; en iPhone no se guarda
-automáticamente en Fotos.
+El botón **Compartir** entrega el JPG o GIF al menú nativo del teléfono; en
+iPhone se puede elegir **Guardar imagen** para conservar el GIF animado en Fotos.
+Se muestra solo en teléfonos con soporte para compartir archivos. Se oculta en
+computadoras, iPad y tablets Android, y también con `?kiosk=1` en la URL.
+Si el navegador no ofrece esta función, la entrega por correo sigue disponible.
 
 Verificado en el navegador con tamaños de 320 × 568, 360 × 640, 390 × 844,
 430 × 932, 568 × 320, 844 × 390, 768 × 1024 y 1280 × 720, además de foto y GIF

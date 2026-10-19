@@ -51,7 +51,6 @@
   .camera-shutter { min-height: 52px; margin-top: 8px; font-size: 23px; }
   .kiosk--message .print { max-width: min(100%, 420px, calc((var(--app-height) - 230px) * 2 / 3)); }
   .kiosk--message .result-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(100%, 420px); margin: 16px auto 0; }
-  .kiosk--message .result-download { grid-column: auto; }
   .kiosk--message .reset-note { margin-top: 16px; }
   .kiosk--message .btn-row { display: grid; grid-template-columns: minmax(0, 1fr); width: min(100%, 380px); margin: 24px auto 0; gap: 10px; }
   .kiosk--message .btn-row .btn { min-height: 48px; padding: 14px 20px; font-size: 16px; }

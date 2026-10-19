@@ -125,7 +125,6 @@ body {
 }
 .btn-primary:active { transform: scale(0.96); }
 .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
-.result-download { display: inline-block; text-decoration: none; }
 .btn-ghost {
   background: rgba(255, 255, 255, 0.06);
   color: #fff;

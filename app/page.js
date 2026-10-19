@@ -7,7 +7,7 @@ import CameraScreen from "./components/camera-screen";
 import EmailScreen from "./components/email-screen";
 import { encodeGif } from "../lib/gif";
 import { FRAMES, drawFrame, FRAME_WIDTH, FRAME_HEIGHT } from "../lib/frames";
-import { shouldShowDownload } from "../lib/download-visibility";
+import { isPhoneDevice } from "../lib/share-availability";
 
 const IDLE_RESET_S = 90;
 const RESULT_RESET_S = 60;
@@ -17,7 +17,8 @@ const COPY = {
     group: "Grupo", groupHint: "Horizontal", portrait: "Retrato", portraitHint: "Vertical",
     hint: "Colócate dentro del encuadre", back: "Volver", capture: "Tomar foto",
     captureGif: "Tomar 3 fotos", loading: "Abriendo cámara…", shot: "Foto",
-    processing: "Preparando tu recuerdo…", email: "Correo", download: "Descargar", retake: "Repetir",
+    processing: "Preparando tu recuerdo…", email: "Correo", share: "Compartir", retake: "Repetir",
+    shareError: "No pudimos abrir Compartir. Puedes enviarla por correo.",
     done: "Terminar", reset: "Volvemos al inicio en", seconds: "s",
     sentTitle: "Tu foto va en camino", sentHint: "La enviamos a", sendAnother: "Enviar a otro correo",
     sendError: "No pudimos enviar la foto. Revisa la conexión e inténtalo de nuevo.",
@@ -37,7 +38,8 @@ const COPY = {
     group: "Group", groupHint: "Landscape", portrait: "Portrait", portraitHint: "Vertical",
     hint: "Step inside the frame", back: "Back", capture: "Take photo",
     captureGif: "Take 3 photos", loading: "Opening camera…", shot: "Photo",
-    processing: "Preparing your memory…", email: "Email", download: "Download", retake: "Retake",
+    processing: "Preparing your memory…", email: "Email", share: "Share", retake: "Retake",
+    shareError: "We couldn't open Share. You can send it by email.",
     done: "Done", reset: "Returning to start in", seconds: "s",
     sentTitle: "Your photo is on its way", sentHint: "We sent it to", sendAnother: "Send to another email",
     sendError: "We couldn't send your photo. Check the connection and try again.",
@@ -69,7 +71,9 @@ export default function Kiosk() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [resultBlob, setResultBlob] = useState(null);
-  const [showDownload, setShowDownload] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareError, setShareError] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [marketingOptIn, setMarketingOptIn] = useState(false);
@@ -123,8 +127,19 @@ export default function Kiosk() {
   useEffect(() => { document.documentElement.lang = language; }, [language]);
   useEffect(() => () => { if (result) URL.revokeObjectURL(result); }, [result]);
   useEffect(() => {
-    setShowDownload(shouldShowDownload(navigator, window.location.search));
-  }, []);
+    if (!resultBlob || !isPhoneDevice(navigator, window.location.search) ||
+        typeof navigator.share !== "function" || typeof navigator.canShare !== "function" ||
+        typeof File === "undefined") {
+      setShowShare(false);
+      return;
+    }
+    try {
+      const file = new File([resultBlob], resultFilename, { type: resultBlob.type });
+      setShowShare(navigator.canShare({ files: [file] }));
+    } catch {
+      setShowShare(false);
+    }
+  }, [resultBlob, resultFilename]);
   useEffect(() => {
     if (screen !== "email") return;
     let active = true;
@@ -153,6 +168,7 @@ export default function Kiosk() {
     setShot(0);
     setResult(null);
     setResultBlob(null);
+    setShareError("");
     setName("");
     setEmail("");
     setMarketingOptIn(false);
@@ -219,12 +235,12 @@ export default function Kiosk() {
   }, [screen, stopCamera]);
 
   useEffect(() => {
-    if (screen !== "result" && screen !== "sent") return;
+    if ((screen !== "result" && screen !== "sent") || sharing) return;
     setResetIn(RESULT_RESET_S);
     const interval = setInterval(() => setResetIn(value => Math.max(0, value - 1)), 1000);
     const timeout = setTimeout(resetToAttract, RESULT_RESET_S * 1000);
     return () => { clearInterval(interval); clearTimeout(timeout); };
-  }, [screen, resetToAttract]);
+  }, [screen, sharing, resetToAttract]);
 
   const chooseExperience = (type) => {
     clearCapture();
@@ -313,6 +329,20 @@ export default function Kiosk() {
     kickIdle();
   };
 
+  const sharePhoto = async () => {
+    if (!showShare || !resultBlob || sharing) return;
+    setShareError("");
+    setSharing(true);
+    try {
+      const file = new File([resultBlob], resultFilename, { type: resultBlob.type });
+      await navigator.share({ files: [file] });
+    } catch (error) {
+      if (error?.name !== "AbortError") setShareError(copy.shareError);
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const sendPhoto = async () => {
     if (!resultBlob || !sendId || sending.current || !name.trim() || !email.trim()) return;
     sending.current = true;
@@ -367,10 +397,11 @@ export default function Kiosk() {
           </div>
           <div className="result-actions">
             <button type="button" className="btn btn-primary" onClick={() => setScreen("email")}>{copy.email}</button>
-            {showDownload && <a className="btn btn-ghost result-download" href={result} download={resultFilename}>{copy.download}</a>}
+            {showShare && <button type="button" className="btn btn-ghost" onClick={sharePhoto} disabled={sharing}>{copy.share}</button>}
             <button type="button" className="btn btn-ghost" onClick={() => { clearCapture(); setScreen("camera"); }}>{copy.retake}</button>
             <button type="button" className="btn btn-ghost" onClick={resetToAttract}>{copy.done}</button>
           </div>
+          {shareError && <p className="subtitle" role="alert">{shareError}</p>}
           <p className="reset-note">{copy.reset} {resetIn}{copy.seconds}…</p>
         </div>
       )}
