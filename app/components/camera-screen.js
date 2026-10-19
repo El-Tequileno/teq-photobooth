@@ -7,7 +7,7 @@ function FrameOverlay({ image, thumbnail = false }) {
     : <span className={className} aria-hidden="true" />;
 }
 
-export default function CameraScreen({ language, captureType, frameId, onFrameChange, frameImages, videoRef, backdropVideoRef, phoneCamera, cameraReady, frameError, countdown, shot, busy, testCamera, onReady, onCapture, onBack }) {
+export default function CameraScreen({ language, captureType, frameId, onFrameChange, frameImages, videoRef, backdropVideoRef, phoneCamera, cameraFacing, cameraSwitchError, onSwitchCamera, cameraReady, frameError, countdown, shot, busy, testCamera, onReady, onCapture, onBack }) {
   const isSpanish = language === "es";
   const frameImage = frameImages[frameId];
   const total = captureType === "gif" ? 3 : 1;
@@ -16,7 +16,8 @@ export default function CameraScreen({ language, captureType, frameId, onFrameCh
     mode: total === 3 ? (isSpanish ? "GIF · 3 FOTOS" : "GIF · 3 PHOTOS") : (isSpanish ? "FOTO" : "PHOTO"),
     frame: isSpanish ? "Elige un marco" : "Choose a frame",
     capture: total === 3 ? (isSpanish ? "Tomar 3 fotos" : "Take 3 photos") : (isSpanish ? "Tomar foto" : "Take photo"),
-    status: !cameraReady ? (isSpanish ? "Abriendo cámara…" : "Opening camera…") : frameError ? (isSpanish ? "No se pudo cargar el marco. Elige otro o recarga la página." : "The frame could not be loaded. Choose another or reload the page.") : !frameImage ? (isSpanish ? "Cargando marco…" : "Loading frame…") : busy ? `${isSpanish ? "Foto" : "Photo"} ${shot} / ${total}` : (isSpanish ? "Mira a la cámara" : "Look at the camera"),
+    switch: cameraFacing === "user" ? (isSpanish ? "Usar cámara trasera" : "Use rear camera") : (isSpanish ? "Usar cámara frontal" : "Use front camera"),
+    status: !cameraReady ? (isSpanish ? "Abriendo cámara…" : "Opening camera…") : frameError ? (isSpanish ? "No se pudo cargar el marco. Elige otro o recarga la página." : "The frame could not be loaded. Choose another or reload the page.") : cameraSwitchError ? (isSpanish ? "No pudimos cambiar de cámara. Sigue usando la anterior." : "Could not switch cameras. The previous camera is still available.") : !frameImage ? (isSpanish ? "Cargando marco…" : "Loading frame…") : busy ? `${isSpanish ? "Foto" : "Photo"} ${shot} / ${total}` : (isSpanish ? "Mira a la cámara" : "Look at the camera"),
   };
   return (
     <section className="camera-screen" aria-label={isSpanish ? "Cámara" : "Camera"}>
@@ -25,11 +26,20 @@ export default function CameraScreen({ language, captureType, frameId, onFrameCh
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m14 5-7 7 7 7M7 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
         <p>{labels.mode}</p>
-        <span>{language.toUpperCase()}</span>
+        {phoneCamera ? (
+          <button type="button" className="camera-switch" onClick={onSwitchCamera} disabled={!cameraReady || busy} aria-label={labels.switch} title={labels.switch}>
+            <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+              <path d="M4 11a12 12 0 0 1 20-5l2 2M28 21a12 12 0 0 1-20 5l-2-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="m25 3 1 5-5-1M7 29l-1-5 5 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M11 13h3l1.5-2h2l1.5 2h3v9H11v-9Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              <circle cx="16.5" cy="17.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </button>
+        ) : <span>{language.toUpperCase()}</span>}
       </header>
 
       <div className="camera-stage">
-        <div className={`camera-viewfinder${phoneCamera ? " camera-viewfinder--phone" : ""}`}>
+        <div className={`camera-viewfinder${phoneCamera ? " camera-viewfinder--phone" : ""}${phoneCamera && cameraFacing === "environment" ? " camera-viewfinder--rear" : ""}`}>
           {phoneCamera && <video ref={backdropVideoRef} className="camera-video camera-video--backdrop" autoPlay playsInline muted aria-hidden="true" />}
           {phoneCamera && <span className="camera-video-dimmer" aria-hidden="true" />}
           <video ref={videoRef} className="camera-video camera-video--main" autoPlay playsInline muted onLoadedData={onReady} onPlaying={onReady} />

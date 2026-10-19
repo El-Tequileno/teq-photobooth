@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fittedVideoRect } from "../lib/camera-fit.js";
+import { drawFittedVideo, fittedVideoRect } from "../lib/camera-fit.js";
 
 test("phone framing contains the full image while desktop cover keeps filling the frame", () => {
   const phone = fittedVideoRect(1280, 720, 1080, 1620, "contain");
@@ -9,4 +9,21 @@ test("phone framing contains the full image while desktop cover keeps filling th
   assert.deepEqual(desktop, { x: -900, y: 0, width: 2880, height: 1620 });
   const portrait = fittedVideoRect(720, 1080, 1080, 1620, "contain");
   assert.deepEqual(portrait, { x: 0, y: 0, width: 1080, height: 1620 });
+});
+
+test("front camera is mirrored and rear camera is not in the saved image", () => {
+  const operations = [];
+  const video = { videoWidth: 720, videoHeight: 1080 };
+  const ctx = {
+    save: () => operations.push("save"),
+    translate: (...args) => operations.push(["translate", ...args]),
+    scale: (...args) => operations.push(["scale", ...args]),
+    drawImage: (...args) => operations.push(["drawImage", ...args]),
+    restore: () => operations.push("restore"),
+  };
+  drawFittedVideo(ctx, video, 1080, 1620, "contain", true);
+  assert.deepEqual(operations, ["save", ["translate", 1080, 0], ["scale", -1, 1], ["drawImage", video, 0, 0, 1080, 1620], "restore"]);
+  operations.length = 0;
+  drawFittedVideo(ctx, video, 1080, 1620, "contain", false);
+  assert.deepEqual(operations, [["drawImage", video, 0, 0, 1080, 1620]]);
 });

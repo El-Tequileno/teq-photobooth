@@ -8,7 +8,7 @@ import EmailScreen from "./components/email-screen";
 import { encodeGif } from "../lib/gif";
 import { FRAMES, drawFrame, FRAME_WIDTH, FRAME_HEIGHT } from "../lib/frames";
 import { isPhoneDevice } from "../lib/share-availability";
-import { drawMirroredVideo } from "../lib/camera-fit";
+import { drawFittedVideo } from "../lib/camera-fit";
 
 const IDLE_RESET_S = 90;
 const RESULT_RESET_S = 60;
@@ -66,6 +66,8 @@ export default function Kiosk() {
   const [frameImages, setFrameImages] = useState({});
   const [frameErrors, setFrameErrors] = useState({});
   const [phoneCamera, setPhoneCamera] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState("user");
+  const [cameraSwitchError, setCameraSwitchError] = useState(false);
   const [testCamera, setTestCamera] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -89,6 +91,7 @@ export default function Kiosk() {
   const videoRef = useRef(null);
   const backdropVideoRef = useRef(null);
   const streamRef = useRef(null);
+  const switchFromRef = useRef(null);
   const idleTimer = useRef(null);
   const captureRun = useRef(0);
   const capturing = useRef(false);
@@ -164,12 +167,17 @@ export default function Kiosk() {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (backdropVideoRef.current) backdropVideoRef.current.srcObject = null;
   }, []);
 
   const clearCapture = useCallback(() => {
     captureRun.current += 1;
     capturing.current = false;
     stopCamera();
+    switchFromRef.current = null;
+    setCameraFacing("user");
+    setCameraSwitchError(false);
     setCameraReady(false);
     setBusy(false);
     setCountdown(0);
@@ -226,7 +234,7 @@ export default function Kiosk() {
         } else {
           stream = await navigator.mediaDevices.getUserMedia({
             video: phoneCamera
-              ? { facingMode: "user", resizeMode: "none" }
+              ? { facingMode: { exact: cameraFacing }, resizeMode: "none" }
               : { facingMode: "user", width: { ideal: 1080 }, height: { ideal: 1620 } },
             audio: false,
           });
@@ -247,16 +255,24 @@ export default function Kiosk() {
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
         if (backdropVideoRef.current) backdropVideoRef.current.srcObject = stream;
+        switchFromRef.current = null;
       } catch (error) {
         if (!cancelled) {
           console.error(`[TEQ camera] ${error.name}: ${error.message}`);
+          if (switchFromRef.current) {
+            const previousFacing = switchFromRef.current;
+            switchFromRef.current = null;
+            setCameraSwitchError(true);
+            setCameraFacing(previousFacing);
+            return;
+          }
           setCameraFailure(error.name);
           setErrorKind("camera"); setScreen("error");
         }
       }
     })();
     return () => { cancelled = true; stopCamera(); stopTestCamera?.(); };
-  }, [screen, stopCamera, phoneCamera]);
+  }, [screen, stopCamera, phoneCamera, cameraFacing]);
 
   useEffect(() => {
     if ((screen !== "result" && screen !== "sent") || sharing) return;
@@ -273,6 +289,14 @@ export default function Kiosk() {
   };
 
   const backToSelection = () => { clearCapture(); setScreen("select"); };
+
+  const switchCamera = () => {
+    if (!phoneCamera || !cameraReady || busy) return;
+    switchFromRef.current = cameraFacing;
+    setCameraSwitchError(false);
+    setCameraReady(false);
+    setCameraFacing(cameraFacing === "user" ? "environment" : "user");
+  };
 
   const startCapture = async () => {
     if (!cameraReady || !frameImage || frameError || capturing.current) return;
@@ -298,13 +322,14 @@ export default function Kiosk() {
         canvas.height = Math.round(canvas.width * FRAME_HEIGHT / FRAME_WIDTH);
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Canvas context is unavailable");
+        const mirrored = cameraFacing === "user";
         if (phoneCamera) {
           // Keep the entire mobile camera image visible; a darkened copy fills any side bands.
-          drawMirroredVideo(ctx, video, canvas.width, canvas.height, "cover");
+          drawFittedVideo(ctx, video, canvas.width, canvas.height, "cover", mirrored);
           ctx.fillStyle = "rgba(0, 0, 0, .58)";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
-        drawMirroredVideo(ctx, video, canvas.width, canvas.height, phoneCamera ? "contain" : "cover");
+        drawFittedVideo(ctx, video, canvas.width, canvas.height, phoneCamera ? "contain" : "cover", mirrored);
         drawFrame(ctx, frameImage, canvas.width, canvas.height);
         if (total === 3) frames.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
         if (index < total - 1) { await wait(350); if (captureRun.current !== run) return; }
@@ -407,7 +432,8 @@ export default function Kiosk() {
       {screen === "camera" && (
         <CameraScreen language={language} captureType={captureType} frameId={frameId}
           onFrameChange={setFrameId} frameImages={frameImages} frameError={frameError} videoRef={videoRef}
-          backdropVideoRef={backdropVideoRef} phoneCamera={phoneCamera}
+          backdropVideoRef={backdropVideoRef} phoneCamera={phoneCamera} cameraFacing={cameraFacing}
+          cameraSwitchError={cameraSwitchError} onSwitchCamera={switchCamera}
           cameraReady={cameraReady} countdown={countdown} shot={shot} busy={busy}
           testCamera={testCamera} onReady={() => setCameraReady(Boolean(videoRef.current?.videoWidth && videoRef.current?.videoHeight))}
           onCapture={startCapture} onBack={backToSelection} />

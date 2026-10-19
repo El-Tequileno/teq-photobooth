@@ -70,6 +70,9 @@ En teléfonos, la cámara muestra toda la imagen sin ampliar el recorte para
 llenar el marco vertical. Una copia oscurecida rellena los espacios laterales o
 superiores; el JPEG y cada fotograma del GIF usan el mismo encuadre. En la
 tablet fija y en computadoras se conserva el encuadre anterior.
+El botón de la esquina superior derecha cambia entre la cámara frontal y la
+trasera del celular. La frontal se muestra como espejo; la trasera conserva su
+orientación natural. Si la otra cámara no está disponible, se recupera la anterior.
 
 El botón **Compartir** entrega el JPG o GIF al menú nativo del teléfono; en
 iPhone se puede elegir **Guardar imagen** para conservar el GIF animado en Fotos.
