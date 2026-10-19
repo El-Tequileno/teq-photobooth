@@ -9,6 +9,7 @@ import { encodeGif } from "../lib/gif";
 import { FRAMES, drawFrame, FRAME_WIDTH, FRAME_HEIGHT } from "../lib/frames";
 import { isPhoneDevice } from "../lib/share-availability";
 import { drawFittedVideo } from "../lib/camera-fit";
+import { setOneXZoom } from "../lib/camera-zoom";
 
 const IDLE_RESET_S = 90;
 const RESULT_RESET_S = 60;
@@ -89,7 +90,6 @@ export default function Kiosk() {
   const [errorKind, setErrorKind] = useState("camera");
   const [cameraFailure, setCameraFailure] = useState("");
   const videoRef = useRef(null);
-  const backdropVideoRef = useRef(null);
   const streamRef = useRef(null);
   const switchFromRef = useRef(null);
   const idleTimer = useRef(null);
@@ -168,7 +168,6 @@ export default function Kiosk() {
       streamRef.current = null;
     }
     if (videoRef.current) videoRef.current.srcObject = null;
-    if (backdropVideoRef.current) backdropVideoRef.current.srcObject = null;
   }, []);
 
   const clearCapture = useCallback(() => {
@@ -234,27 +233,15 @@ export default function Kiosk() {
         } else {
           stream = await navigator.mediaDevices.getUserMedia({
             video: phoneCamera
-              ? { facingMode: { exact: cameraFacing }, resizeMode: "none" }
+              ? { facingMode: { exact: cameraFacing }, resizeMode: "none", zoom: { ideal: 1 } }
               : { facingMode: "user", width: { ideal: 1080 }, height: { ideal: 1620 } },
             audio: false,
           });
         }
-        if (phoneCamera) {
-          try {
-            const track = stream.getVideoTracks()[0];
-            const minZoom = track?.getCapabilities?.()?.zoom?.min;
-            const currentZoom = track?.getSettings?.()?.zoom;
-            if (Number.isFinite(minZoom) && Number.isFinite(currentZoom) && currentZoom > minZoom) {
-              await track.applyConstraints({ advanced: [{ zoom: minZoom }] });
-            }
-          } catch {
-            // Zoom controls are optional; keep the camera open when unavailable.
-          }
-        }
+        if (phoneCamera) await setOneXZoom(stream.getVideoTracks()[0]);
         if (cancelled) { stream.getTracks().forEach(track => track.stop()); return; }
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
-        if (backdropVideoRef.current) backdropVideoRef.current.srcObject = stream;
         switchFromRef.current = null;
       } catch (error) {
         if (!cancelled) {
@@ -323,13 +310,7 @@ export default function Kiosk() {
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Canvas context is unavailable");
         const mirrored = cameraFacing === "user";
-        if (phoneCamera) {
-          // Keep the entire mobile camera image visible; a darkened copy fills any side bands.
-          drawFittedVideo(ctx, video, canvas.width, canvas.height, "cover", mirrored);
-          ctx.fillStyle = "rgba(0, 0, 0, .58)";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-        drawFittedVideo(ctx, video, canvas.width, canvas.height, phoneCamera ? "contain" : "cover", mirrored);
+        drawFittedVideo(ctx, video, canvas.width, canvas.height, mirrored);
         drawFrame(ctx, frameImage, canvas.width, canvas.height);
         if (total === 3) frames.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
         if (index < total - 1) { await wait(350); if (captureRun.current !== run) return; }
@@ -432,7 +413,7 @@ export default function Kiosk() {
       {screen === "camera" && (
         <CameraScreen language={language} captureType={captureType} frameId={frameId}
           onFrameChange={setFrameId} frameImages={frameImages} frameError={frameError} videoRef={videoRef}
-          backdropVideoRef={backdropVideoRef} phoneCamera={phoneCamera} cameraFacing={cameraFacing}
+          phoneCamera={phoneCamera} cameraFacing={cameraFacing}
           cameraSwitchError={cameraSwitchError} onSwitchCamera={switchCamera}
           cameraReady={cameraReady} countdown={countdown} shot={shot} busy={busy}
           testCamera={testCamera} onReady={() => setCameraReady(Boolean(videoRef.current?.videoWidth && videoRef.current?.videoHeight))}

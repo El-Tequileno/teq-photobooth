@@ -66,10 +66,10 @@ la cámara queda junto a los controles; el encuadre conserva siempre la proporci
 2:3 del PNG y de la captura. Los marcos tienen desplazamiento horizontal cuando
 no caben, y los botones del resultado se reorganizan en pantallas pequeñas.
 Las pantallas muy bajas permiten desplazarse sin cortar el inicio del contenido.
-En teléfonos, la cámara muestra toda la imagen sin ampliar el recorte para
-llenar el marco vertical. Una copia oscurecida rellena los espacios laterales o
-superiores; el JPEG y cada fotograma del GIF usan el mismo encuadre. En la
-tablet fija y en computadoras se conserva el encuadre anterior.
+En teléfonos, la cámara solicita zoom 1× cuando el navegador permite
+controlarlo. La imagen llena el marco 2:3 sin franjas duplicadas: solo se
+recortan los bordes necesarios para esa proporción. El JPEG y cada fotograma
+del GIF usan el mismo encuadre de la vista previa.
 El botón de la esquina superior derecha cambia entre la cámara frontal y la
 trasera del celular. La frontal se muestra como espejo; la trasera conserva su
 orientación natural. Si la otra cámara no está disponible, se recupera la anterior.

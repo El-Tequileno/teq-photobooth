@@ -13,9 +13,6 @@
 .camera-viewfinder { position: relative; flex: none; width: min(100cqw, calc(100cqh * 2 / 3)); aspect-ratio: 2 / 3; background: #19262c; overflow: hidden; }
 .camera-video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .camera-viewfinder--rear .camera-video { transform: none; }
-.camera-video--backdrop, .camera-video-dimmer { position: absolute; inset: 0; }
-.camera-video-dimmer { background: rgba(0, 0, 0, .58); }
-.camera-viewfinder--phone .camera-video--main { position: absolute; inset: 0; object-fit: contain; background: transparent; }
 .camera-overlay { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
 .camera-countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff5e4; font-family: Impact, "Arial Narrow", sans-serif; font-size: clamp(64px, 55cqh, 430px); line-height: 1; text-shadow: 6px 7px 0 #151515c9; animation: camera-count .28s ease-out; pointer-events: none; }
 .camera-test-label { position: absolute; top: 16%; left: 50%; transform: translateX(-50%); padding: 5px 9px; border-radius: 3px; background: #10191ec9; color: #fff5e4; font-size: 10px; white-space: nowrap; }
