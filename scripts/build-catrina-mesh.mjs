@@ -1,0 +1,70 @@
+// Rebuilds the face mesh registered to the Catrina texture.
+// Canonical geometry: Google MediaPipe, Apache-2.0 (see reference/face/README.md).
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const obj = fs.readFileSync(path.join(root, "reference/face/canonical_face_model.obj"), "utf8").split(/\r?\n/);
+const vertices = obj.filter(s => s.startsWith("v ")).map(s => s.split(/\s+/).slice(1).map(Number));
+const tex = obj.filter(s => s.startsWith("vt ")).map(s => s.split(/\s+/).slice(1).map(Number));
+const faces = obj.filter(s => s.startsWith("f ")).map(s => s.split(/\s+/).slice(1).map(t => t.split("/").map(Number)));
+const uv = Array(468);
+for (const face of faces) for (const [v, t] of face) uv[v - 1] = [tex[t - 1][0], 1 - tex[t - 1][1]];
+const anchors = new Map();
+const pin = (i, x, y) => anchors.set(i, [x, y]);
+const oval = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
+// Source atlas silhouette, clockwise from the forehead, matching the Catrina texture.
+const half = [[.5,.053],[.59,.057],[.67,.08],[.74,.126],[.79,.185],[.825,.25],[.85,.325],[.867,.40],[.87,.48],[.861,.555],[.847,.63],[.826,.70],[.795,.77],[.755,.83],[.70,.89],[.64,.935],[.585,.96],[.54,.975],[.5,.976]];
+oval.forEach((id, i) => { const p = i <= 18 ? half[i] : half[36 - i]; pin(id, i <= 18 ? p[0] : 1 - p[0], p[1]); });
+const leftEye = [[33,.244,.423],[246,.254,.412],[161,.272,.400],[160,.298,.389],[159,.328,.385],[158,.359,.391],[157,.386,.404],[173,.412,.424],[133,.431,.445],[155,.416,.46],[154,.391,.471],[153,.364,.477],[145,.335,.477],[144,.303,.47],[163,.276,.455],[7,.257,.44]];
+const rightIds = [263,466,388,387,386,385,384,398,362,382,381,380,374,373,390,249];
+leftEye.forEach(([id,x,y], i) => { pin(id,x,y); pin(rightIds[i],1-x,y); });
+[[168,.5,.35],[6,.5,.445],[197,.5,.485],[195,.5,.52],[5,.5,.55],[4,.5,.575],[1,.5,.603],[19,.5,.63],[94,.5,.654],[2,.5,.662],[98,.458,.644],[327,.542,.644],[48,.443,.611],[278,.557,.611],
+ [61,.377,.744],[291,.623,.744],[0,.5,.706],[17,.5,.824],[37,.446,.710],[267,.554,.710],[84,.455,.815],[314,.545,.815],
+ [78,.385,.744],[191,.408,.735],[80,.436,.728],[81,.463,.725],[82,.485,.726],[13,.5,.727],[312,.515,.726],[311,.537,.725],[310,.564,.728],[415,.592,.735],[308,.615,.744],
+ [95,.405,.759],[88,.431,.769],[178,.455,.776],[87,.478,.779],[14,.5,.78],[317,.522,.779],[402,.545,.776],[318,.569,.769],[324,.595,.759],
+ [70,.255,.300],[63,.30,.283],[105,.345,.286],[66,.39,.306],[107,.43,.316],[300,.745,.300],[293,.70,.283],[334,.655,.286],[296,.61,.306],[336,.57,.316],
+ [50,.245,.57],[280,.755,.57],[101,.355,.58],[330,.645,.58],[205,.32,.67],[425,.68,.67],[200,.5,.88]
+].forEach(([i,x,y]) => pin(i,x,y));
+
+const ids = [...anchors.keys()];
+// Only registered vertices are indexed by the rendered triangles.
+const atlas = uv.flatMap((point, index) => anchors.get(index) || point);
+const round = v => +v.toFixed(6);
+// Triangulate the explicitly registered artwork landmarks. This avoids tiny,
+// highly stretched canonical UV triangles near the closed lips.
+const samples=ids.map(id=>anchors.get(id));
+const pointCount=samples.length;
+samples.push([-10,-10],[10,-10],[0,10]);
+let triangles=[[pointCount,pointCount+1,pointCount+2]];
+const area=([a,b,c])=>(samples[b][0]-samples[a][0])*(samples[c][1]-samples[a][1])-(samples[b][1]-samples[a][1])*(samples[c][0]-samples[a][0]);
+const inCircle=(triangle,p)=>{
+  const [a,b,c]=triangle.map(i=>[samples[i][0]-p[0],samples[i][1]-p[1]]);
+  const det=(a[0]*a[0]+a[1]*a[1])*(b[0]*c[1]-b[1]*c[0])-(b[0]*b[0]+b[1]*b[1])*(a[0]*c[1]-a[1]*c[0])+(c[0]*c[0]+c[1]*c[1])*(a[0]*b[1]-a[1]*b[0]);
+  return det*area(triangle)>1e-14;
+};
+for(let i=0;i<pointCount;i++){
+  const bad=triangles.filter(t=>inCircle(t,samples[i]));
+  const edges=new Map();
+  for(const t of bad)for(let j=0;j<3;j++){
+    const a=t[j],b=t[(j+1)%3],key=[Math.min(a,b),Math.max(a,b)].join(",");
+    if(edges.has(key))edges.delete(key);else edges.set(key,[a,b]);
+  }
+  triangles=triangles.filter(t=>!bad.includes(t));
+  for(const [a,b] of edges.values())if(Math.abs(area([a,b,i]))>1e-12)triangles.push([a,b,i]);
+}
+const holes=[leftEye.map(([,x,y])=>[x,y]),leftEye.map(([,x,y])=>[1-x,y]),[78,191,80,81,82,13,312,311,310,415,308,324,318,402,317,14,87,178,88,95].map(i=>anchors.get(i))];
+const inside=(p,poly)=>{
+  let result=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const a=poly[i],b=poly[j];
+    if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])result=!result;
+  }
+  return result;
+};
+triangles=triangles.filter(t=>t.every(i=>i<pointCount)&&!holes.some(h=>inside(t.map(i=>samples[i]).reduce((a,p)=>[a[0]+p[0]/3,a[1]+p[1]/3],[0,0]),h)));
+const indices=triangles.flatMap(t=>(area(t)<0?t:[t[0],t[2],t[1]]).map(i=>ids[i]));
+fs.writeFileSync(path.join(root,"lib/catrina-mesh.js"),`// Generated by scripts/build-catrina-mesh.mjs. MediaPipe landmark registration, Apache-2.0.\nexport const FACE_ATLAS_UV = ${JSON.stringify(atlas)};\nexport const FACE_TRIANGLES = ${JSON.stringify(indices)};\nexport const CANONICAL_FACE = ${JSON.stringify(vertices.map(([x,y,z])=>({x:round(.5+x/20),y:round(.36-y/30),z:round(-z/20)})))};\n`);
+
+console.log(`Built face mesh: ${uv.length} tracker vertices, ${triangles.length} triangles, ${ids.length} atlas anchors.`);

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.9.0",
+    "@mediapipe/tasks-vision": "0.10.32",
     "gifenc": "^1.0.3",
     "next": "^16.2.10",
     "qrcode": "^1.5.4",

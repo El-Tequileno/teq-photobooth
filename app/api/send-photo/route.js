@@ -39,7 +39,7 @@ export async function POST(request) {
     return json({ error: "Too many requests", code: "rate_limited" }, 429);
   }
 
-  const copy = photoEmailCopy(language, kind);
+  const copy = photoEmailCopy(language, kind, name);
   const payload = {
     from: sender,
     to: [email],

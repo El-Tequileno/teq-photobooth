@@ -10,6 +10,8 @@ import { FRAMES, drawFrame, FRAME_WIDTH, FRAME_HEIGHT } from "../lib/frames";
 import { isPhoneDevice } from "../lib/share-availability";
 import { drawFittedVideo } from "../lib/camera-fit";
 import { setOneXZoom } from "../lib/camera-zoom";
+import { photoFilename } from "../lib/photo-filename";
+import { createCatrinaRenderer, isCatrinaFilter } from "../lib/catrina-filter";
 
 const IDLE_RESET_S = 90;
 const RESULT_RESET_S = 60;
@@ -64,6 +66,9 @@ export default function Kiosk() {
   const [language, setLanguage] = useState("es");
   const [captureType, setCaptureType] = useState("photo");
   const [frameId, setFrameId] = useState(FRAMES[0].id);
+  const [filterId, setFilterId] = useState("none");
+  const [faceStatus, setFaceStatus] = useState("off");
+  const [faceCount, setFaceCount] = useState(0);
   const [frameImages, setFrameImages] = useState({});
   const [frameErrors, setFrameErrors] = useState({});
   const [phoneCamera, setPhoneCamera] = useState(false);
@@ -90,6 +95,12 @@ export default function Kiosk() {
   const [errorKind, setErrorKind] = useState("camera");
   const [cameraFailure, setCameraFailure] = useState("");
   const videoRef = useRef(null);
+  const faceCanvasRef = useRef(null);
+  const faceTrackerRef = useRef(null);
+  const faceRendererRef = useRef(null);
+  const filterIdRef = useRef(filterId);
+  filterIdRef.current = filterId;
+  const faceEffectActive = isCatrinaFilter(filterId);
   const streamRef = useRef(null);
   const switchFromRef = useRef(null);
   const idleTimer = useRef(null);
@@ -100,7 +111,7 @@ export default function Kiosk() {
   const frameError = Boolean(frameErrors[frameId]);
   const copy = COPY[language];
   const modeName = captureType === "gif" ? copy.gif : copy.photo;
-  const resultFilename = `el-tequileno.${captureType === "gif" ? "gif" : "jpg"}`;
+  const resultFilename = photoFilename(name, captureType);
   const cameraHelp = cameraFailure === "NotAllowedError" || cameraFailure === "SecurityError"
     ? (language === "es" ? "El sistema o el navegador bloqueó la cámara. Habilita su permiso para esta aplicación y vuelve a intentarlo." : "The system or browser blocked the camera. Allow camera access for this app and try again.")
     : cameraFailure === "NotFoundError"
@@ -170,7 +181,7 @@ export default function Kiosk() {
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
-  const clearCapture = useCallback(() => {
+  const clearCapture = useCallback((keepFilter = false) => {
     captureRun.current += 1;
     capturing.current = false;
     stopCamera();
@@ -181,6 +192,9 @@ export default function Kiosk() {
     setBusy(false);
     setCountdown(0);
     setShot(0);
+    if (!keepFilter) setFilterId("none");
+    setFaceCount(0);
+    setFaceStatus("off");
     setResult(null);
     setResultBlob(null);
     setShareError("");
@@ -212,6 +226,73 @@ export default function Kiosk() {
   }, [kickIdle]);
 
   useEffect(() => () => { captureRun.current += 1; stopCamera(); }, [stopCamera]);
+
+  useEffect(() => {
+    const overlay = faceCanvasRef.current;
+    if (screen !== "camera" || !faceEffectActive || !cameraReady || !overlay) return;
+    let cancelled = false;
+    let animation;
+    let tracker;
+    let renderer;
+    let lastDetection = 0;
+    const ctx = overlay.getContext("2d");
+    if (!ctx) { setFaceStatus("error"); return; }
+    overlay.width = 540;
+    overlay.height = 810;
+    setFaceStatus("loading");
+    setFaceCount(0);
+    (async () => {
+      try {
+        const { createFaceTracker } = await import("../lib/face-tracker");
+        renderer = await createCatrinaRenderer();
+        if (cancelled) { renderer.dispose(); return; }
+        tracker = await createFaceTracker();
+        if (cancelled) { tracker.close(); return; }
+        faceTrackerRef.current = tracker;
+        faceRendererRef.current = renderer;
+        setFaceStatus("ready");
+        const update = (now) => {
+          if (cancelled) return;
+          const video = videoRef.current;
+          if (now - lastDetection >= 90 && video?.readyState >= 2 && video.videoWidth) {
+            lastDetection = now;
+            try {
+              const faces = tracker.detectForVideo(video, now).faceLandmarks;
+              ctx.clearRect(0, 0, overlay.width, overlay.height);
+              renderer.draw(ctx, faces, video, overlay.width, overlay.height, cameraFacing === "user", filterIdRef.current);
+              setFaceCount(previous => previous === faces.length ? previous : faces.length);
+            } catch (error) {
+              console.error("[TEQ face filter]", error);
+              ctx.clearRect(0, 0, overlay.width, overlay.height);
+              setFaceCount(0);
+              setFaceStatus("error");
+              return;
+            }
+          }
+          animation = requestAnimationFrame(update);
+        };
+        animation = requestAnimationFrame(update);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("[TEQ face filter]", error);
+          setFaceStatus("error");
+        }
+        renderer?.dispose();
+        tracker?.close();
+        tracker = null;
+      }
+    })();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(animation);
+      faceTrackerRef.current = null;
+      faceRendererRef.current = null;
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+      setFaceCount(0);
+      tracker?.close();
+      renderer?.dispose();
+    };
+  }, [screen, faceEffectActive, cameraReady, cameraFacing]);
 
   useEffect(() => {
     if (screen !== "camera") return;
@@ -286,7 +367,8 @@ export default function Kiosk() {
   };
 
   const startCapture = async () => {
-    if (!cameraReady || !frameImage || frameError || capturing.current) return;
+    if (!cameraReady || !frameImage || frameError || capturing.current ||
+        (faceEffectActive && (faceStatus !== "ready" || !faceCount))) return;
     const run = ++captureRun.current;
     capturing.current = true;
     setBusy(true);
@@ -311,6 +393,18 @@ export default function Kiosk() {
         if (!ctx) throw new Error("Canvas context is unavailable");
         const mirrored = cameraFacing === "user";
         drawFittedVideo(ctx, video, canvas.width, canvas.height, mirrored);
+        if (faceEffectActive) {
+          const tracker = faceTrackerRef.current;
+          const renderer = faceRendererRef.current;
+          if (!tracker || !renderer) throw new Error("Face effect is not ready");
+          const faces = tracker.detectForVideo(video, performance.now()).faceLandmarks;
+          if (!faces.length) {
+            const error = new Error("No face detected during capture");
+            error.name = "FaceNotFoundError";
+            throw error;
+          }
+          renderer.draw(ctx, faces, video, canvas.width, canvas.height, mirrored, filterId);
+        }
         drawFrame(ctx, frameImage, canvas.width, canvas.height);
         if (total === 3) frames.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
         if (index < total - 1) { await wait(350); if (captureRun.current !== run) return; }
@@ -329,7 +423,7 @@ export default function Kiosk() {
     } catch (error) {
       if (captureRun.current === run) {
         console.error(`[TEQ capture/${captureType}] ${error.name}: ${error.message}`);
-        setErrorKind("capture"); setScreen("error");
+        setErrorKind(error.name === "FaceNotFoundError" ? "face" : "capture"); setScreen("error");
       }
     } finally {
       if (captureRun.current === run) { capturing.current = false; setBusy(false); setCountdown(0); }
@@ -383,7 +477,7 @@ export default function Kiosk() {
     form.append("language", language);
     form.append("kind", captureType);
     form.append("requestId", sendId);
-    form.append("photo", resultBlob, `el-tequileno.${captureType === "gif" ? "gif" : "jpg"}`);
+    form.append("photo", resultBlob, resultFilename);
     try {
       const response = await fetch("/api/send-photo", { method: "POST", body: form, signal: AbortSignal.timeout(35000) });
       const data = await response.json();
@@ -413,6 +507,8 @@ export default function Kiosk() {
       {screen === "camera" && (
         <CameraScreen language={language} captureType={captureType} frameId={frameId}
           onFrameChange={setFrameId} frameImages={frameImages} frameError={frameError} videoRef={videoRef}
+          filterId={filterId} onFilterChange={setFilterId} faceCanvasRef={faceCanvasRef}
+          faceStatus={faceStatus} faceCount={faceCount}
           phoneCamera={phoneCamera} cameraFacing={cameraFacing}
           cameraSwitchError={cameraSwitchError} onSwitchCamera={switchCamera}
           cameraReady={cameraReady} countdown={countdown} shot={shot} busy={busy}
@@ -428,7 +524,7 @@ export default function Kiosk() {
           <div className="result-actions">
             <button type="button" className="btn btn-primary" onClick={() => setScreen("email")}>{copy.email}</button>
             {showShare && <button type="button" className="btn btn-ghost" onClick={sharePhoto} disabled={sharing}>{copy.share}</button>}
-            <button type="button" className="btn btn-ghost" onClick={() => { clearCapture(); setScreen("camera"); }}>{copy.retake}</button>
+            <button type="button" className="btn btn-ghost" onClick={() => { clearCapture(true); setScreen("camera"); }}>{copy.retake}</button>
             <button type="button" className="btn btn-ghost" onClick={resetToAttract}>{copy.done}</button>
           </div>
           {shareError && <p className="subtitle" role="alert">{shareError}</p>}
@@ -456,10 +552,10 @@ export default function Kiosk() {
       )}
       {screen === "error" && (
         <div className="stage-content">
-          <h1 className="error-title">{errorKind === "camera" ? copy.cameraError : copy.captureError}</h1>
-          <p className="subtitle">{errorKind === "camera" ? cameraHelp : copy.captureHelp}</p>
+          <h1 className="error-title">{errorKind === "camera" ? copy.cameraError : errorKind === "face" ? (language === "es" ? "No encontramos un rostro" : "We could not find a face") : copy.captureError}</h1>
+          <p className="subtitle">{errorKind === "camera" ? cameraHelp : errorKind === "face" ? (language === "es" ? "Mira a la cámara y vuelve a intentarlo." : "Face the camera and try again.") : copy.captureHelp}</p>
           <div className="btn-row">
-            <button type="button" className="btn btn-primary" onClick={() => { clearCapture(); setScreen("camera"); }}>{copy.retry}</button>
+            <button type="button" className="btn btn-primary" onClick={() => { clearCapture(true); setScreen("camera"); }}>{copy.retry}</button>
             <button type="button" className="btn btn-ghost" onClick={backToSelection}>{copy.back}</button>
             <button type="button" className="btn btn-ghost" onClick={resetToAttract}>{copy.startOver}</button>
           </div>

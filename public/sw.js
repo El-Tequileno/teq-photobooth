@@ -1,10 +1,17 @@
-const CACHE_NAME = "teq-photobooth-v1";
+const CACHE_NAME = "teq-photobooth-v5";
 const CACHE_PREFIX = "teq-photobooth-";
 const APP_FILES = [
   "/",
   "/manifest.webmanifest",
   "/brand/el-tequileno-white.svg",
   "/frames/frames.json",
+  "/effects/catrina-texture.png",
+  "/face-model/face_landmarker.task",
+  "/face-wasm/face-runtime-logging.js",
+  "/face-wasm/vision_wasm_internal.js",
+  "/face-wasm/vision_wasm_internal.wasm",
+  "/face-wasm/vision_wasm_nosimd_internal.js",
+  "/face-wasm/vision_wasm_nosimd_internal.wasm",
   "/icon-192.png",
   "/icon-512.png",
   "/icon-maskable-512.png",
@@ -73,7 +80,8 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  if (APP_FILES.includes(url.pathname) || url.pathname.startsWith("/frames/")) {
+  if (APP_FILES.includes(url.pathname) || url.pathname.startsWith("/frames/") || url.pathname.startsWith("/effects/") ||
+      url.pathname.startsWith("/face-model/") || url.pathname.startsWith("/face-wasm/")) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_NAME);
       try {

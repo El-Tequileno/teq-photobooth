@@ -13,7 +13,7 @@ Las dos opciones abren la cámara reutilizada del prototipo, ahora traducida.
 Foto genera un JPEG. GIF captura tres fotos con cuenta regresiva independiente y
 reproduce las tres en bucle. El resultado coincide con la vista previa y se
 procesa localmente. Permite compartir en teléfonos y repetir.
-No hay llamadas a IA, impresión ni un QR de demostración en el flujo de usuario.
+No hay llamadas a servicios de IA, impresión ni un QR de demostración en el flujo de usuario.
 Los archivos se liberan de la memoria al repetir, terminar o vencer la sesión.
 
 3. Cámara vertical con fondo oscuro, marco blanco/negro, logo y cuenta regresiva
@@ -57,6 +57,40 @@ habilita el disparo hasta que el marco seleccionado esté cargado y tenga la
 proporción correcta. Un archivo que falle no impide utilizar los otros marcos.
 Ver `public/frames/README.md` para las instrucciones completas. Todavía no hay
 una pantalla de administración para subir archivos.
+
+## Efecto facial Catrina
+
+En la cámara se puede elegir **Sin filtro** (opción inicial) o **Catrina**, además
+del marco. Catrina usa maquillaje con acabado de pincel en PNG, inspirado en el
+maquillaje marfil, rojo y azul de la imagen facilitada por el usuario. La base
+blanca cubre también la frente: se extiende el contorno superior hacia la línea
+del cabello y se aprovecha el difuminado propio de la textura para evitar una
+franja sin maquillaje sobre el adorno azul.
+El seguimiento reconoce hasta cuatro rostros y adapta el maquillaje mediante
+una malla de 127 puntos, con aberturas para los ojos y la boca. Se aplica a la
+vista previa, el JPEG y cada foto del GIF. La cámara frontal y el maquillaje se
+reflejan juntos. Si no detecta un rostro, la captura espera a que alguien mire
+a la cámara; si pierde el rostro durante la cuenta regresiva, muestra una opción
+para intentarlo de nuevo.
+
+El seguimiento usa MediaPipe Face Landmarker en el navegador. El modelo y los
+archivos WebAssembly están en `public/face-model/` y `public/face-wasm/` para que
+el efecto funcione localmente y después de instalar la PWA sin conexión. No se
+envía video a un servicio de reconocimiento facial. El modelo procede de
+`https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`;
+los archivos WebAssembly se copiaron de `@mediapipe/tasks-vision` 0.10.32. Si se
+actualiza la dependencia, hay que actualizar también esos archivos locales.
+El cargador adicional `public/face-wasm/face-runtime-logging.js` usa `printErr`
+para registrar como información únicamente el aviso de inicio de XNNPACK. Esto
+evita un falso «Console Error» en Next.js durante desarrollo; los demás mensajes
+de error y excepciones del motor mantienen su manejo original. Este cargador se
+aplica tanto al runtime SIMD como al alternativo y se incluye en la caché PWA.
+El diseño está en `public/effects/` y se incluye en la caché sin conexión.
+Para regenerar las coordenadas de la malla: `node scripts/build-catrina-mesh.mjs`.
+En desarrollo, `/filter-lab` permite comparar el filtro con la imagen original
+sobre un modelo de prueba o una foto local; esa foto solo se lee en el navegador. La herramienta
+devuelve 404 en producción. Ver `reference/face/README.md` para procedencia y
+el prompt de la textura. Falta probar el rendimiento en el iPad físico del booth.
 
 ## Celular y tablet
 
