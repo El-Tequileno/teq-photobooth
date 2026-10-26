@@ -1,4 +1,4 @@
-const CACHE_NAME = "teq-photobooth-v5";
+const CACHE_NAME = "teq-photobooth-v6";
 const CACHE_PREFIX = "teq-photobooth-";
 const APP_FILES = [
   "/",

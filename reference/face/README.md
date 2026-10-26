@@ -5,9 +5,11 @@ Filtro seleccionable y renderizado localmente:
 - `public/effects/catrina-texture.png`: textura RGBA con pincel y base marfil.
 
 La base blanca cubre la frente extendiendo el contorno superior hacia el cabello
-según el eje frente/entrecejo del rostro. Se usa el difuminado propio del PNG y
-se evita aplicar un segundo difuminado de malla en ese borde. Las mejillas y la
-mandíbula conservan su transición suave.
+según el eje frente/entrecejo del rostro. El arco superior es poco pronunciado
+y la base se difumina en una franja estrecha, medida desde el borde en las
+coordenadas de la textura. Así se evita desvanecer grandes triángulos de toda la
+frente. Los pigmentos del adorno azul conservan su intensidad. Las mejillas y
+la mandíbula conservan su transición suave.
 
 `catrina-style-reference.png` es la imagen que proporcionó el usuario como
 referencia de estilo. Este directorio no se sirve como contenido público.

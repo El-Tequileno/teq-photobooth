@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { landmarkToCanvas, faceMeshPositions, isCatrinaFilter, CATRINA_STYLES, facePaintEdgeOpacity } from "../lib/catrina-filter.js";
+import { landmarkToCanvas, faceMeshPositions, isCatrinaFilter, CATRINA_STYLES, facePaintEdgeOpacity, foreheadPaintDistance } from "../lib/catrina-filter.js";
 import { FACE_ATLAS_UV, FACE_TRIANGLES, CANONICAL_FACE } from "../lib/catrina-mesh.js";
 
 test("face points match the camera crop and mirror in preview and capture", () => {
@@ -40,10 +40,22 @@ test("white paint covers the upper forehead while the cheek and jaw edges stay f
   const unextendedTop = landmarkToCanvas(CANONICAL_FACE[10], 1000, 1500, 540, 810, false);
   const extendedY = (1 - mesh[10*3+1]) * 405;
   assert.ok(extendedY < unextendedTop.y - 40, "The base must reach above the tracked forehead oval");
+  const sideY = (1 - mesh[297*3+1]) * 405;
+  assert.ok(sideY - extendedY < 13, "The upper forehead should have a shallow arc instead of a rounded dome");
   for(let offset=0;offset<FACE_TRIANGLES.length;offset+=3){
     const [a,b,c]=FACE_TRIANGLES.slice(offset,offset+3).map(id=>({x:mesh[id*3],y:mesh[id*3+1]}));
     assert.ok((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)>0, "Extending the forehead must not fold the paint mesh");
   }
+});
+
+test("forehead feathering follows its contour and finishes before the decorative makeup", () => {
+  for(const index of [10,338,297,332,284,251,109,67,103,54,21]){
+    const x=FACE_ATLAS_UV[index*2], y=FACE_ATLAS_UV[index*2+1];
+    assert.ok(foreheadPaintDistance(x,y)<1e-8);
+    assert.ok(Math.abs(foreheadPaintDistance(x,y+.025)-.025)<1e-8);
+    assert.ok(foreheadPaintDistance(x,y+.05)>.045);
+  }
+  assert.ok(foreheadPaintDistance(.5,.24)>.045,"The forehead ornament should remain fully painted");
 });
 
 test("the artwork mesh has no folded triangles around the eyes, nose or lips", () => {

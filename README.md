@@ -64,8 +64,9 @@ En la cámara se puede elegir **Sin filtro** (opción inicial) o **Catrina**, ad
 del marco. Catrina usa maquillaje con acabado de pincel en PNG, inspirado en el
 maquillaje marfil, rojo y azul de la imagen facilitada por el usuario. La base
 blanca cubre también la frente: se extiende el contorno superior hacia la línea
-del cabello y se aprovecha el difuminado propio de la textura para evitar una
-franja sin maquillaje sobre el adorno azul.
+del cabello con un arco poco pronunciado. Una franja estrecha de difuminado en
+las coordenadas de la textura suaviza la unión con la piel sin desvanecer toda
+la frente ni el adorno azul.
 El seguimiento reconoce hasta cuatro rostros y adapta el maquillaje mediante
 una malla de 127 puntos, con aberturas para los ojos y la boca. Se aplica a la
 vista previa, el JPEG y cada foto del GIF. La cámara frontal y el maquillaje se
