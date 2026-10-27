@@ -1,4 +1,4 @@
-const CACHE_NAME = "teq-photobooth-v14";
+const CACHE_NAME = "teq-photobooth-v15";
 const CACHE_PREFIX = "teq-photobooth-";
 const APP_FILES = [
   "/",
@@ -9,6 +9,8 @@ const APP_FILES = [
   "/effects/catrina-bloom-atlas.png",
   "/effects/catrina-leaf.png",
   "/face-model/face_landmarker.task",
+  "/backgrounds/agave-fields.jpg",
+  "/background-model/selfie_segmenter.tflite",
   "/face-wasm/face-runtime-logging.js",
   "/face-wasm/vision_wasm_internal.js",
   "/face-wasm/vision_wasm_internal.wasm",

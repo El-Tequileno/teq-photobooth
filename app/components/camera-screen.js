@@ -1,5 +1,6 @@
 import { FRAMES } from "../../lib/frames";
 import { CATRINA_STYLES, isCatrinaFilter } from "../../lib/catrina-filter";
+import { AGAVE_BACKGROUND } from "../../lib/background";
 
 function FrameOverlay({ image, thumbnail = false }) {
   const className = thumbnail ? "frame-thumbnail" : "camera-overlay";
@@ -8,11 +9,18 @@ function FrameOverlay({ image, thumbnail = false }) {
     : <span className={className} aria-hidden="true" />;
 }
 
-export default function CameraScreen({ language, captureType, frameId, onFrameChange, frameImages, videoRef, filterId, onFilterChange, faceCanvasRef, faceStatus, faceCount, phoneCamera, cameraFacing, cameraSwitchError, onSwitchCamera, cameraReady, frameError, countdown, shot, busy, testCamera, onReady, onCapture, onBack }) {
+export default function CameraScreen({ language, captureType, frameId, onFrameChange, frameImages, videoRef, filterId, onFilterChange, faceCanvasRef, faceStatus, faceCount, backgroundId, onBackgroundChange, backgroundCanvasRef, backgroundStatus, backgroundPerson, phoneCamera, cameraFacing, cameraSwitchError, onSwitchCamera, cameraReady, frameError, countdown, shot, busy, testCamera, onReady, onCapture, onBack }) {
   const isSpanish = language === "es";
   const frameImage = frameImages[frameId];
   const total = captureType === "gif" ? 3 : 1;
   const faceEffectActive = isCatrinaFilter(filterId);
+  const backgroundActive = backgroundId === "agave";
+  const backgroundBlocked = backgroundActive && (backgroundStatus !== "ready" || !backgroundPerson);
+  const backgroundMessage = backgroundActive && (backgroundStatus === "error"
+    ? (isSpanish ? "No se pudo preparar el fondo. Elige Sin fondo para continuar." : "The background could not start. Choose No background to continue.")
+    : backgroundStatus !== "ready"
+      ? (isSpanish ? "Preparando campos de agave…" : "Preparing agave fields…")
+      : !backgroundPerson ? (isSpanish ? "Colócate al centro, de cintura hacia arriba" : "Stand in the center, framed from the waist up") : "");
   const labels = {
     back: isSpanish ? "Volver" : "Back",
     mode: total === 3 ? (isSpanish ? "GIF · 3 FOTOS" : "GIF · 3 PHOTOS") : (isSpanish ? "FOTO" : "PHOTO"),
@@ -45,6 +53,7 @@ export default function CameraScreen({ language, captureType, frameId, onFrameCh
       <div className="camera-stage">
         <div className={`camera-viewfinder${phoneCamera && cameraFacing === "environment" ? " camera-viewfinder--rear" : ""}`}>
           <video ref={videoRef} className="camera-video" autoPlay playsInline muted onLoadedData={onReady} onPlaying={onReady} />
+          <canvas ref={backgroundCanvasRef} className="camera-background" hidden={!backgroundActive || backgroundStatus !== "ready"} aria-hidden="true" />
           <canvas ref={faceCanvasRef} className="camera-face-effect" aria-hidden="true" />
           <FrameOverlay image={frameImage} />
           {testCamera && <span className="camera-test-label">{isSpanish ? "Cámara de prueba" : "Test camera"}</span>}
@@ -53,7 +62,20 @@ export default function CameraScreen({ language, captureType, frameId, onFrameCh
       </div>
 
       <div className="camera-controls">
-        <p className="camera-status" role="status">{labels.status}</p>
+        <p className="camera-status" role="status">{cameraReady && backgroundMessage ? backgroundMessage : labels.status}</p>
+        <fieldset className="camera-backgrounds camera-effects" disabled={busy}>
+          <legend>{isSpanish ? "Fondo" : "Background"}</legend>
+          <div className="camera-effect-options">
+            <button type="button" aria-pressed={!backgroundActive} onClick={() => onBackgroundChange("none")}>
+              {isSpanish ? "Sin fondo" : "No background"}
+            </button>
+            <button type="button" aria-pressed={backgroundActive} onClick={() => onBackgroundChange("agave")}>
+              <img className="background-thumbnail" src={AGAVE_BACKGROUND} width="32" height="38" alt="" aria-hidden="true" />
+              <span>{isSpanish ? "Campos de agave" : "Agave fields"}</span>
+            </button>
+          </div>
+        </fieldset>
+        {backgroundActive && <p className="camera-pose-hint">{isSpanish ? "Al centro y de cintura hacia arriba · Mira a la cámara" : "Centered, from the waist up · Look at the camera"}</p>}
         <fieldset className="camera-frames" disabled={busy}>
           <legend>{labels.frame}</legend>
           <div className="camera-frame-options">
@@ -78,7 +100,7 @@ export default function CameraScreen({ language, captureType, frameId, onFrameCh
             ))}
           </div>
         </fieldset>
-        <button type="button" className="camera-shutter" disabled={!cameraReady || !frameImage || frameError || busy || (faceEffectActive && (faceStatus !== "ready" || !faceCount))} onClick={onCapture}>
+        <button type="button" className="camera-shutter" disabled={!cameraReady || !frameImage || frameError || busy || backgroundBlocked || (faceEffectActive && (faceStatus !== "ready" || !faceCount))} onClick={onCapture}>
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h4l2-3h4l2 3h4v14H4V6Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.7" /></svg>
           {labels.capture}
         </button>

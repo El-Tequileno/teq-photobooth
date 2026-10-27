@@ -104,6 +104,43 @@ sobre un modelo de prueba o una foto local; esa foto solo se lee en el navegador
 devuelve 404 en producción. Ver `reference/face/README.md` para procedencia y
 el prompt de la textura. Falta probar el rendimiento en el iPad físico del booth.
 
+## Fondo virtual: Campos de agave
+
+La cámara incluye **Campos de agave** (seleccionado inicialmente) y **Sin fondo**.
+El paisaje procede de la fotografía facilitada por el usuario, con un recorte
+central vertical que conserva el camino y las montañas, y un desenfoque suave.
+El recorte automático de personas suaviza los contornos de cabello y ropa; se
+aplica a la vista previa, al JPEG y a cada una de las tres fotos del GIF. El fondo
+se mantiene derecho al usar la cámara frontal. Los marcos y Catrina se componen
+después, sobre las personas. Al repetir se conserva el fondo elegido; al terminar
+se restablece Campos de agave para el siguiente visitante.
+
+Verificado en Chromium con una fotografía pública de prueba: JPEG 1080 × 1620,
+GIF 540 × 810 con dos personas, combinación con Catrina, encuadre vacío,
+recuperación con Sin fondo tras fallo de carga del modelo y captura sin conexión
+después de instalar la PWA. El seguimiento facial utiliza el reloj actual tanto
+en la vista previa como en la captura para mantener marcas de tiempo crecientes
+cuando ambos efectos procesan fotogramas durante el GIF.
+
+MediaPipe Selfie Segmenter procesa los fotogramas localmente, con inferencia
+limitada a 12 actualizaciones por segundo y sin reprocesar fotogramas repetidos.
+Cada actualización congela la imagen y su máscara para evitar desalineación con
+movimiento. La captura calcula una máscara nueva, y no permite guardar una
+escena vacía si no encuentra personas. Si el modelo o la fotografía no cargan,
+se muestra un aviso y se puede continuar con **Sin fondo**.
+
+El modelo está en `public/background-model/` y la fotografía en
+`public/backgrounds/`; ambos se guardan en la caché PWA. La instalación también
+precarga su módulo de código para usarlo sin conexión. Las imágenes de cámara
+y las máscaras se liberan al salir
+de la cámara; no se guardan ni se envían a un servicio de IA.
+
+La interfaz recomienda centrarse y posar de cintura hacia arriba. Para la
+instalación física, usar luz frontal suave y uniforme y la cámara a la altura
+de los ojos. No se aplica una corrección artificial de iluminación a los rostros.
+Falta medir fluidez y calidad del recorte en el iPad físico, especialmente al
+combinar grupos y Catrina. Ver `public/backgrounds/README.md`.
+
 ## Celular y tablet
 
 La bienvenida, selección, cámara y resultado se adaptan al ancho y a la altura
@@ -204,6 +241,9 @@ Para una prueba de desarrollo sin webcam, abrir `/?camera=test`. Solo funciona
 en modo desarrollo y muestra «Cámara de prueba»; se genera una escena animada
 localmente y se recorre exactamente la misma captura y codificación. La URL
 normal `/` siempre utiliza la cámara real del dispositivo.
+La escena gráfica de prueba no representa personas reales: seleccionar **Sin fondo**
+para recorrer la captura con ella. El fondo virtual se verifica con fotografías
+de personas o una cámara real.
 Para revisar el encuadre de celular con una señal de cámara ancha en una
 computadora, usar `/?camera=test-wide&phone=test` en desarrollo.
 

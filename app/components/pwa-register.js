@@ -11,6 +11,7 @@ export default function PwaRegister() {
     const warmOfflineBundles = () => {
       if (active) import("gifenc").catch(error => console.warn("Photo booth GIF offline setup failed", error));
       if (active) import("../../lib/face-tracker").catch(error => console.warn("Photo booth face effect offline setup failed", error));
+      if (active) import("../../lib/background-segmenter").catch(error => console.warn("Photo booth background offline setup failed", error));
     };
     const register = async () => {
       try {

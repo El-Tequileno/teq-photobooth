@@ -12,6 +12,7 @@ import { drawFittedVideo } from "../lib/camera-fit";
 import { setOneXZoom } from "../lib/camera-zoom";
 import { photoFilename } from "../lib/photo-filename";
 import { createCatrinaRenderer, isCatrinaFilter } from "../lib/catrina-filter";
+import { AGAVE_BACKGROUND, createBackgroundCompositor } from "../lib/background";
 
 const IDLE_RESET_S = 90;
 const RESULT_RESET_S = 60;
@@ -67,6 +68,9 @@ export default function Kiosk() {
   const [captureType, setCaptureType] = useState("photo");
   const [frameId, setFrameId] = useState(FRAMES[0].id);
   const [filterId, setFilterId] = useState("none");
+  const [backgroundId, setBackgroundId] = useState("agave");
+  const [backgroundStatus, setBackgroundStatus] = useState("off");
+  const [backgroundPerson, setBackgroundPerson] = useState(false);
   const [faceStatus, setFaceStatus] = useState("off");
   const [faceCount, setFaceCount] = useState(0);
   const [frameImages, setFrameImages] = useState({});
@@ -95,12 +99,16 @@ export default function Kiosk() {
   const [errorKind, setErrorKind] = useState("camera");
   const [cameraFailure, setCameraFailure] = useState("");
   const videoRef = useRef(null);
+  const backgroundCanvasRef = useRef(null);
+  const backgroundSegmenterRef = useRef(null);
+  const backgroundCompositorRef = useRef(null);
   const faceCanvasRef = useRef(null);
   const faceTrackerRef = useRef(null);
   const faceRendererRef = useRef(null);
   const filterIdRef = useRef(filterId);
   filterIdRef.current = filterId;
   const faceEffectActive = isCatrinaFilter(filterId);
+  const backgroundActive = backgroundId === "agave";
   const streamRef = useRef(null);
   const switchFromRef = useRef(null);
   const idleTimer = useRef(null);
@@ -192,7 +200,9 @@ export default function Kiosk() {
     setBusy(false);
     setCountdown(0);
     setShot(0);
-    if (!keepFilter) setFilterId("none");
+    if (!keepFilter) { setFilterId("none"); setBackgroundId("agave"); }
+    setBackgroundStatus("off");
+    setBackgroundPerson(false);
     setFaceCount(0);
     setFaceStatus("off");
     setResult(null);
@@ -228,6 +238,73 @@ export default function Kiosk() {
   useEffect(() => () => { captureRun.current += 1; stopCamera(); }, [stopCamera]);
 
   useEffect(() => {
+    const canvas = backgroundCanvasRef.current;
+    if (screen !== "camera" || !backgroundActive || !cameraReady || !canvas) return;
+    let cancelled = false;
+    let animation;
+    let segmenter;
+    let compositor;
+    let lastUpdate = -Infinity;
+    let lastVideoTime = -1;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { setBackgroundStatus("error"); return; }
+    canvas.width = 540;
+    canvas.height = 810;
+    setBackgroundStatus("loading");
+    setBackgroundPerson(false);
+    (async () => {
+      try {
+        const image = new Image();
+        image.src = AGAVE_BACKGROUND;
+        await image.decode();
+        const { createBackgroundSegmenter } = await import("../lib/background-segmenter");
+        if (cancelled) return;
+        segmenter = await createBackgroundSegmenter();
+        if (cancelled) { segmenter.close(); segmenter = null; return; }
+        compositor = createBackgroundCompositor(image);
+        backgroundSegmenterRef.current = segmenter;
+        backgroundCompositorRef.current = compositor;
+        const update = now => {
+          if (cancelled) return;
+          const video = videoRef.current;
+          // Limit inference to 12fps and skip repeated camera frames, leaving time for Catrina.
+          if (now - lastUpdate >= 80 && video?.readyState >= 2 && video.videoWidth && video.currentTime !== lastVideoTime) {
+            lastUpdate = now;
+            lastVideoTime = video.currentTime;
+            try {
+              const person = compositor.update(video, segmenter);
+              compositor.draw(ctx, canvas.width, canvas.height, cameraFacing === "user");
+              setBackgroundPerson(person);
+              setBackgroundStatus("ready");
+            } catch (error) {
+              console.error("[TEQ background]", error);
+              setBackgroundStatus("error");
+              setBackgroundPerson(false);
+              return;
+            }
+          }
+          animation = requestAnimationFrame(update);
+        };
+        animation = requestAnimationFrame(update);
+      } catch (error) {
+        if (!cancelled) { console.error("[TEQ background]", error); setBackgroundStatus("error"); }
+        segmenter?.close();
+        segmenter = null;
+        compositor?.dispose();
+      }
+    })();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(animation);
+      backgroundSegmenterRef.current = null;
+      backgroundCompositorRef.current = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      segmenter?.close();
+      compositor?.dispose();
+    };
+  }, [screen, backgroundActive, cameraReady, cameraFacing]);
+
+  useEffect(() => {
     const overlay = faceCanvasRef.current;
     if (screen !== "camera" || !faceEffectActive || !cameraReady || !overlay) return;
     let cancelled = false;
@@ -257,7 +334,9 @@ export default function Kiosk() {
           if (now - lastDetection >= 90 && video?.readyState >= 2 && video.videoWidth) {
             lastDetection = now;
             try {
-              const faces = tracker.detectForVideo(video, now).faceLandmarks;
+              // RAF's timestamp can predate an intervening capture inference. Use the
+              // current clock for both paths so MediaPipe always sees increasing times.
+              const faces = tracker.detectForVideo(video, performance.now()).faceLandmarks;
               ctx.clearRect(0, 0, overlay.width, overlay.height);
               renderer.draw(ctx, faces, video, overlay.width, overlay.height, cameraFacing === "user", filterIdRef.current);
               setFaceCount(previous => previous === faces.length ? previous : faces.length);
@@ -368,6 +447,7 @@ export default function Kiosk() {
 
   const startCapture = async () => {
     if (!cameraReady || !frameImage || frameError || capturing.current ||
+        (backgroundActive && (backgroundStatus !== "ready" || !backgroundPerson)) ||
         (faceEffectActive && (faceStatus !== "ready" || !faceCount))) return;
     const run = ++captureRun.current;
     capturing.current = true;
@@ -392,7 +472,19 @@ export default function Kiosk() {
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Canvas context is unavailable");
         const mirrored = cameraFacing === "user";
-        drawFittedVideo(ctx, video, canvas.width, canvas.height, mirrored);
+        if (backgroundActive) {
+          const segmenter = backgroundSegmenterRef.current;
+          const compositor = backgroundCompositorRef.current;
+          if (!segmenter || !compositor) throw new Error("Background is not ready");
+          if (!compositor.update(video, segmenter)) {
+            const error = new Error("No person detected during capture");
+            error.name = "PersonNotFoundError";
+            throw error;
+          }
+          compositor.draw(ctx, canvas.width, canvas.height, mirrored);
+        } else {
+          drawFittedVideo(ctx, video, canvas.width, canvas.height, mirrored);
+        }
         if (faceEffectActive) {
           const tracker = faceTrackerRef.current;
           const renderer = faceRendererRef.current;
@@ -423,7 +515,7 @@ export default function Kiosk() {
     } catch (error) {
       if (captureRun.current === run) {
         console.error(`[TEQ capture/${captureType}] ${error.name}: ${error.message}`);
-        setErrorKind(error.name === "FaceNotFoundError" ? "face" : "capture"); setScreen("error");
+        setErrorKind(error.name === "FaceNotFoundError" ? "face" : error.name === "PersonNotFoundError" ? "person" : "capture"); setScreen("error");
       }
     } finally {
       if (captureRun.current === run) { capturing.current = false; setBusy(false); setCountdown(0); }
@@ -509,6 +601,8 @@ export default function Kiosk() {
           onFrameChange={setFrameId} frameImages={frameImages} frameError={frameError} videoRef={videoRef}
           filterId={filterId} onFilterChange={setFilterId} faceCanvasRef={faceCanvasRef}
           faceStatus={faceStatus} faceCount={faceCount}
+          backgroundId={backgroundId} onBackgroundChange={setBackgroundId} backgroundCanvasRef={backgroundCanvasRef}
+          backgroundStatus={backgroundStatus} backgroundPerson={backgroundPerson}
           phoneCamera={phoneCamera} cameraFacing={cameraFacing}
           cameraSwitchError={cameraSwitchError} onSwitchCamera={switchCamera}
           cameraReady={cameraReady} countdown={countdown} shot={shot} busy={busy}
@@ -552,8 +646,8 @@ export default function Kiosk() {
       )}
       {screen === "error" && (
         <div className="stage-content">
-          <h1 className="error-title">{errorKind === "camera" ? copy.cameraError : errorKind === "face" ? (language === "es" ? "No encontramos un rostro" : "We could not find a face") : copy.captureError}</h1>
-          <p className="subtitle">{errorKind === "camera" ? cameraHelp : errorKind === "face" ? (language === "es" ? "Mira a la cámara y vuelve a intentarlo." : "Face the camera and try again.") : copy.captureHelp}</p>
+          <h1 className="error-title">{errorKind === "camera" ? copy.cameraError : errorKind === "person" ? (language === "es" ? "No encontramos a nadie en el encuadre" : "We could not find anyone in the frame") : errorKind === "face" ? (language === "es" ? "No encontramos un rostro" : "We could not find a face") : copy.captureError}</h1>
+          <p className="subtitle">{errorKind === "camera" ? cameraHelp : errorKind === "person" ? (language === "es" ? "Colócate al centro, de cintura hacia arriba, y vuelve a intentarlo. También puedes elegir Sin fondo." : "Stand in the center, framed from the waist up, and try again. You can also choose No background.") : errorKind === "face" ? (language === "es" ? "Mira a la cámara y vuelve a intentarlo." : "Face the camera and try again.") : copy.captureHelp}</p>
           <div className="btn-row">
             <button type="button" className="btn btn-primary" onClick={() => { clearCapture(true); setScreen("camera"); }}>{copy.retry}</button>
             <button type="button" className="btn btn-ghost" onClick={backToSelection}>{copy.back}</button>

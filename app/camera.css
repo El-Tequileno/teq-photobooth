@@ -14,10 +14,15 @@
 .camera-video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .camera-viewfinder--rear .camera-video { transform: none; }
 .camera-face-effect { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.camera-background { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.camera-background[hidden] { display: none; }
 .camera-overlay { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
 .camera-countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff5e4; font-family: Impact, "Arial Narrow", sans-serif; font-size: clamp(64px, 55cqh, 430px); line-height: 1; text-shadow: 6px 7px 0 #151515c9; animation: camera-count .28s ease-out; pointer-events: none; }
 .camera-test-label { position: absolute; top: 16%; left: 50%; transform: translateX(-50%); padding: 5px 9px; border-radius: 3px; background: #10191ec9; color: #fff5e4; font-size: 10px; white-space: nowrap; }
 .camera-controls { width: min(100%, 560px); min-width: 0; margin: auto; }
+.camera-pose-hint { margin: 5px 0; color: #c2cdd0; font-size: 11px; line-height: 1.4; }
+.camera-backgrounds { margin-bottom: 7px; }
+.camera-backgrounds .background-thumbnail { width: 30px; height: 36px; object-fit: cover; object-position: center; border-radius: 3px; }
 .camera-status { min-height: 21px; margin-bottom: 5px; color: #d2dbdc; font-size: 12px; line-height: 1.5; }
 .camera-frames { border: 0; min-width: 0; }
 .camera-frames legend { margin: 0 auto 8px; font-size: 11px; letter-spacing: .08em; color: #aab8bd; }
@@ -71,7 +76,7 @@
   .kiosk--message .btn-row .btn { min-height: 48px; padding: 14px 20px; font-size: 16px; }
 }
 @media (max-height: 540px) and (min-width: 480px) {
-  .camera-screen { max-width: 960px; height: max(320px, var(--app-height)); grid-template-columns: minmax(0, 1fr) minmax(240px, .9fr); grid-template-rows: 44px minmax(0, 1fr); gap: 8px 24px; padding: max(8px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+  .camera-screen { max-width: 960px; height: max(440px, var(--app-height)); grid-template-columns: minmax(0, 1fr) minmax(240px, .9fr); grid-template-rows: 44px minmax(0, 1fr); gap: 8px 24px; padding: max(8px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
   .camera-header { grid-column: 1 / -1; }
   .camera-stage { grid-column: 1; grid-row: 2; }
   .camera-controls { grid-column: 2; grid-row: 2; }
