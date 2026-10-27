@@ -14,7 +14,7 @@ export default function FilterLab() {
   const photoRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState("Preparando diseños…");
-  const [faces, setFaces] = useState([CANONICAL_FACE]);
+  const [faces, setFaces] = useState([CANONICAL_FACE.map(point => ({ ...point, y: point.y + .14 }))]);
   const [mirrored, setMirrored] = useState(false);
   const [turn, setTurn] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -63,6 +63,7 @@ export default function FilterLab() {
         const scale = canvas.width / 1000;
         ctx.save();
         ctx.scale(scale, canvas.height / 1500);
+        ctx.translate(0,210);
         const skin = ctx.createRadialGradient(450,480,60,500,550,470);
         skin.addColorStop(0,"#c99b7c");skin.addColorStop(1,"#835e49");
         ctx.fillStyle=skin; ctx.beginPath();ctx.ellipse(500,570,382,460,0,0,Math.PI*2);ctx.fill();
@@ -93,7 +94,7 @@ export default function FilterLab() {
   }
   return <main style={{height:"100dvh",overflow:"auto",padding:"24px",background:"#10191e",color:"#fff5e4"}}>
     <h1 style={{fontSize:24,marginBottom:8}}>Vista previa Catrina</h1>
-    <p style={{color:"#bac6ca",marginBottom:20}}>Maquillaje con textura y base blanca hasta la parte alta de la frente.</p>
+    <p style={{color:"#bac6ca",marginBottom:20}}>Maquillaje con textura y corona de flores junto al borde de la frente.</p>
     <div style={{display:"flex",flexWrap:"wrap",gap:20,alignItems:"center",marginBottom:20}}>
       <label>Probar con una foto <input aria-label="Probar con una foto" type="file" accept="image/*" onChange={loadPhoto} disabled={!ready}/></label>
       <label><input type="checkbox" checked={mirrored} onChange={e=>setMirrored(e.target.checked)}/> Espejo</label>

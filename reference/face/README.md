@@ -3,6 +3,24 @@
 Filtro seleccionable y renderizado localmente:
 
 - `public/effects/catrina-texture.png`: textura RGBA con pincel y base marfil.
+- `public/effects/catrina-flower-crown.png`: corona RGBA transparente de rosas
+  rojas y cempasúchiles naranjas, creada con la herramienta integrada `image_gen`.
+  Se dibuja como accesorio sobre el borde superior de la pintura; la inclinación
+  y la anchura proyectada siguen el eje de la cabeza y los giros del rostro.
+  El PNG se carga localmente y forma parte de la caché sin conexión.
+
+## Prompt de la corona floral
+
+Herramienta integrada `image_gen`, fondo transparente, recurso nuevo sin imagen
+de entrada. Archivo final: `public/effects/catrina-flower-crown.png` (2172 × 724).
+
+```text
+Use case: stylized-concept
+Asset type: transparent PNG floral headpiece sprite for a locally rendered Catrina face filter.
+Primary request: an elegant Mexican Día de Muertos flower crown, viewed straight from the front, as a standalone horizontal accessory with genuine alpha transparency. A refined compact arrangement of seven overlapping blooms: rich crimson red roses and warm orange cempasúchil marigolds, a slightly larger central red rose, graduated smaller flowers toward both ends, a few tasteful dark green leaves tucked underneath. Visually lush dimensional petals, delicate natural irregularities, detailed velvety surfaces, soft painterly photographic realism matching sophisticated ivory/red/blue Catrina face paint.
+Composition: wide horizontal canvas, approximately 3:1 aspect ratio. One shallow gently arched row of blossoms, centered, balanced. The flower heads face toward the viewer; the lower edge follows a shallow curved hairline. The arrangement should be much wider than tall, flowers close together, no tall vertical bouquet, no hanging stems. The subject fills 90% of canvas width and 80% height with transparent margins on all sides. Lowest petals/leaves form a tidy lower edge that can overlap the very top of a painted forehead. Soft frontal light with natural self-shadow between petals, crisp clean cutout edges, no cast shadow outside the flowers.
+Constraints: crown ONLY, no head, no face, no mannequin, no skull, no hair, no makeup mask, no text, no watermark, no background, no ground, no extra accessories. Genuine transparent background. High-quality polished production asset.
+```
 
 La base blanca cubre la frente extendiendo el contorno superior hacia el cabello
 según el eje frente/entrecejo del rostro. El arco superior es poco pronunciado

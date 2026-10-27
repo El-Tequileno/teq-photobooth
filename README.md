@@ -67,6 +67,10 @@ blanca cubre también la frente: se extiende el contorno superior hacia la líne
 del cabello con un arco poco pronunciado. Una franja estrecha de difuminado en
 las coordenadas de la textura suaviza la unión con la piel sin desvanecer toda
 la frente ni el adorno azul.
+La corona de rosas rojas y cempasúchiles naranjas se apoya sobre ese borde. Su
+tamaño y orientación siguen el rostro, incluyendo la inclinación, los giros y
+el reflejo de la cámara frontal. Es un PNG transparente local que se añade a la
+misma vista previa, JPEG y cada foto del GIF.
 El seguimiento reconoce hasta cuatro rostros y adapta el maquillaje mediante
 una malla de 127 puntos, con aberturas para los ojos y la boca. Se aplica a la
 vista previa, el JPEG y cada foto del GIF. La cámara frontal y el maquillaje se
