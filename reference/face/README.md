@@ -3,13 +3,66 @@
 Filtro seleccionable y renderizado localmente:
 
 - `public/effects/catrina-texture.png`: textura RGBA con pincel y base marfil.
-- `public/effects/catrina-flower-crown.png`: corona RGBA transparente de rosas
-  rojas y cempasúchiles naranjas, creada con la herramienta integrada `image_gen`.
-  Se dibuja como accesorio sobre el borde superior de la pintura; la inclinación
-  y la anchura proyectada siguen el eje de la cabeza y los giros del rostro.
+- `public/effects/catrina-bloom-atlas.png`: tres flores RGBA aisladas (rosa roja,
+  cempasúchil naranja y una segunda rosa), creadas con la herramienta integrada
+  `image_gen`. Se colocan seis flores individuales siguiendo dos recorridos
+  del contorno: 10–109–67–103–54–21–162 y 10–338–297–332–284–251–389.
+  Se resuelven primero las dos rosas frontales y después las parejas laterales,
+  calculando la distancia entre sus bordes proyectados para que los pétalos se
+  toquen sin ocultar la flor vecina. Los diámetros relativos al ancho del rostro
+  son 38% para las rosas frontales, 30% para los cempasúchiles y 24.5% para las
+  rosas de los extremos. Si falta espacio en un rostro estrecho o girado, todo
+  el conjunto se reduce conservando esas proporciones y la unión de las flores.
+  Cada flor gira con la tangente local del contorno y conserva su forma redonda.
+  Parte de los pétalos descansa sobre el cabello para evitar extremos flotantes.
+  La diadema mantiene una pequeña elevación en el eje de la cabeza
+  (4% del ancho del rostro), siguiendo la referencia del usuario.
   El PNG se carga localmente y forma parte de la caché sin conexión.
 
-## Prompt de la corona floral
+- `public/effects/catrina-leaf.png`: hoja de rosal verde oscuro con transparencia,
+  generada con la herramienta integrada `image_gen` a partir de la corona original
+  como referencia de estilo. Se dibujan dos hojas detrás de cada unión entre flores,
+  hacia fuera y hacia dentro del arco, para rellenar los huecos. La geometría de
+  las flores permanece intacta. El recurso se incluye en la caché sin conexión.
+
+## Recurso actual: hojas verdes
+
+Prompt utilizado con la herramienta integrada:
+
+```text
+Use case: photorealistic-natural
+Asset type: single transparent rose-leaf sprite for the existing Catrina flower crown.
+Input image: reference ONLY for dark forest-green leaf color, texture, veins and frontal light. Do not edit or reproduce the flowers or crown.
+Primary request: Create exactly ONE isolated realistic green rose leaf lying horizontally, stem/base at the left and pointed tip at the right. Leaf blade centered vertically, filling about 88% of square canvas width and 46% of its height; short subtle stem at left. Dark natural forest-green, slightly leathery surface, clear fine pale branching veins, delicately serrated rounded edge, soft frontal light and natural shading. Match the realistic botanical look of the green leaves in the reference.
+Composition: entire leaf visible, viewed from above, no tilt out of plane, with generous genuinely transparent space above and below.
+Constraints: one leaf only; no flowers, no second leaf, no stems extending beyond canvas, no black/white background, no ground shadow, no text, no watermark. Real alpha transparency around the leaf.
+```
+
+## Recurso actual: flores individuales
+
+Se usó la herramienta integrada `image_gen` para crear `public/effects/catrina-bloom-atlas.png`
+a partir de la corona anterior, con fondo transparente. Prompt:
+
+```text
+Use case: precise-object-edit
+Asset type: transparent sprite atlas of individual flowers extracted from the reference crown for a Catrina headband.
+Input image: reference flower crown, for exact crimson rose and orange marigold appearance only.
+Create ONE wide 3:1 transparent PNG divided into THREE equal square cells in a single horizontal row. Each cell contains exactly ONE isolated, complete, round flower head with no overlap and fully transparent empty margins: left cell a rich crimson red rose, center cell a warm orange cempasuchil marigold, right cell a second rich crimson red rose with slightly different natural petal arrangement. Match the reference's velvety dimensional petals, realistic fine texture and soft frontal light. Each blossom faces straight toward the viewer, stays circular and fills approximately 86 percent of its square cell's width and height, with even transparent margins. Keep every flower fully contained inside its own square cell. This is a spritesheet for separately placing flowers on a head: no connected crown, no garland, no stems, no leaves, no dangling points, no support band, no head, no person, no skull, no lettering, no grid lines, no watermark. Actual alpha transparency throughout the empty background. Preserve the crimson and orange palette and high-quality realistic style of the reference.
+```
+
+## Historial: corona floral anterior
+
+La fuente original `public/effects/catrina-flower-crown.png` se conserva como
+referencia. El recurso actual es `public/effects/catrina-flower-crown-rounded.png`.
+Se editó con la herramienta integrada `image_gen`, manteniendo transparencia,
+los colores y las flores. Prompt de corrección:
+
+```text
+Use case: precise-object-edit
+Edit target: the attached transparent flower-crown PNG. This is a production headpiece sprite used above a Catrina face-paint filter.
+Primary request: fix ONLY the silhouette at the two far ends and along the bottom so this crown rests naturally on a head without sharp dangling tips. Remove the pointed dark-green leaf spikes protruding down at the far left and far right, and all pointed hanging leaf tips along the lower edge. Tuck any remaining small green foliage behind the flower heads. The left end must finish in a rounded, full red rose-petal silhouette and the right end in a rounded, full orange marigold-petal silhouette, with no hanging stems or triangular points. Keep a softly rounded, compact lower edge formed mostly by petals and discreet tiny foliage. At both ends, blooms should look full and rounded, not skinny drooping spikes.
+Invariants: preserve the same individual crimson roses and orange marigolds, their count, order, positions, sizes, natural detailed petal textures and soft frontal lighting. Preserve the wide shallow-arched composition and approximately 3:1 canvas aspect ratio. Do not redesign the flowers, do not add flowers, no new accessories, no head or person. Keep the central large crimson rose exactly as it is. Preserve genuine alpha transparency and transparent margins; no background, no cast shadow outside the cutout, no text, no watermark. Final image: same crown with its pointed lower foliage cleanly removed or tucked away.
+```
 
 Herramienta integrada `image_gen`, fondo transparente, recurso nuevo sin imagen
 de entrada. Archivo final: `public/effects/catrina-flower-crown.png` (2172 × 724).

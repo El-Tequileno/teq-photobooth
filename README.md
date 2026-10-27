@@ -67,10 +67,17 @@ blanca cubre también la frente: se extiende el contorno superior hacia la líne
 del cabello con un arco poco pronunciado. Una franja estrecha de difuminado en
 las coordenadas de la textura suaviza la unión con la piel sin desvanecer toda
 la frente ni el adorno azul.
-La corona de rosas rojas y cempasúchiles naranjas se apoya sobre ese borde. Su
-tamaño y orientación siguen el rostro, incluyendo la inclinación, los giros y
-el reflejo de la cámara frontal. Es un PNG transparente local que se añade a la
-misma vista previa, JPEG y cada foto del GIF.
+La diadema usa seis flores individuales: dos rosas arriba, cempasúchiles
+naranjas a ambos lados y rosas laterales que se apoyan sobre el contorno de la
+cabeza. Las dos rosas frontales son mayores y las flores se tocan por los
+bordes sin ocultarse entre sí. La diadema se eleva ligeramente y calcula las
+posiciones en conjunto sobre el arco del cuero cabelludo para mantener la unión.
+Cada flor conserva sus pétalos redondos, apoyados sobre el cabello. Su tamaño y orientación siguen
+el rostro, incluyendo la inclinación, los giros y el reflejo de la cámara frontal.
+Las hojitas verdes rellenan las uniones detrás de los pétalos, sin cambiar el
+tamaño, la posición ni la separación de las flores.
+Las flores y hojas proceden de PNG transparentes locales y se añaden a la vista previa,
+el JPEG y cada foto del GIF.
 El seguimiento reconoce hasta cuatro rostros y adapta el maquillaje mediante
 una malla de 127 puntos, con aberturas para los ojos y la boca. Se aplica a la
 vista previa, el JPEG y cada foto del GIF. La cámara frontal y el maquillaje se

@@ -1,4 +1,4 @@
-const CACHE_NAME = "teq-photobooth-v7";
+const CACHE_NAME = "teq-photobooth-v14";
 const CACHE_PREFIX = "teq-photobooth-";
 const APP_FILES = [
   "/",
@@ -6,7 +6,8 @@ const APP_FILES = [
   "/brand/el-tequileno-white.svg",
   "/frames/frames.json",
   "/effects/catrina-texture.png",
-  "/effects/catrina-flower-crown.png",
+  "/effects/catrina-bloom-atlas.png",
+  "/effects/catrina-leaf.png",
   "/face-model/face_landmarker.task",
   "/face-wasm/face-runtime-logging.js",
   "/face-wasm/vision_wasm_internal.js",
